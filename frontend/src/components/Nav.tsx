@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuthContext } from './AuthProvider';
 import { CircleUser, Menu, Search } from 'lucide-react';
 import { Dialog, DialogTrigger } from '@radix-ui/react-dialog';
@@ -8,17 +8,17 @@ export default function Navbar() {
   const [user] = useAuthContext();
   const [searchQuery, setSearchQuery] = useState<string>('');
   return (
-    <div className="w-full flex justify-center p-2">
-      <div className="flex flex-row justify-between gap-2 w-[min(100%,600px)] items-center">
+    <div className="flex w-full justify-center p-4">
+      <div className="flex w-full flex-row items-center justify-between gap-2">
         <div>
-          <Menu className='stroke-pine-900' />
+          <Menu className="stroke-pine-900" />
         </div>
         <div className="w-full">
-          <div className="rounded-full bg-[#DEE6D8] text-[16px] h-full flex gap-2 p-2 items-center">
-            <Search className="stroke-pine-900" />
+          <div className="flex h-full items-center gap-2 rounded-full bg-pine-50 p-2 text-pine-900">
+            <Search className="ml-1 stroke-pine-900" />
             <input
               className={
-                'bg-transparent flex w-full rounded-md border border-transparent px-0 py-0 text-sm ring-offset-transparent placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+                'flex w-full rounded-md border border-transparent bg-transparent px-0 py-0 text-sm ring-offset-transparent placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
