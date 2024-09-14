@@ -6,7 +6,7 @@ import LoginModal from './LoginModal';
 
 export default function Navbar() {
   const [user] = useAuthContext();
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>('');
   return (
     <div className="w-full bg-[#EFF3EC] flex justify-center p-2">
       <div className="flex flex-row justify-between gap-2 w-[min(100%,600px)] items-center">
@@ -18,28 +18,25 @@ export default function Navbar() {
             <Search />
             <input
               className={
-                "bg-transparent flex w-full rounded-md border border-transparent px-0 py-0 text-sm ring-offset-transparent placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                'bg-transparent flex w-full rounded-md border border-transparent px-0 py-0 text-sm ring-offset-transparent placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
               }
-              value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder='search'
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="search"
             />
           </div>
         </div>
         <div>
-          {
-            user ? (
-              null // put a PFP here later.
-            ) : (
-              <Dialog>
-                <DialogTrigger>
-                  <CircleUser className="cursor-pointer" />
-                </DialogTrigger>
-                <LoginModal />
-              </Dialog>
-            )
-          }
+          {user ? null : ( // put a PFP here later.
+            <Dialog>
+              <DialogTrigger>
+                <CircleUser className="cursor-pointer" />
+              </DialogTrigger>
+              <LoginModal />
+            </Dialog>
+          )}
         </div>
       </div>
     </div>
-  )
+  );
 }
