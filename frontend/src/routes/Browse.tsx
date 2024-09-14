@@ -19,7 +19,7 @@ export default function Browse() {
   return (
     <>
       <h1 className="text-[24px]">browse listings</h1>
-      <hr className="border-[#34412A] border-opacity-30" />
+      <hr className="border-pine-900 border-opacity-30" />
     </>
   );
 }
