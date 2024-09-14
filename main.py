@@ -1,50 +1,84 @@
-from flatapi import FlatAPI, Request, Response
-from supabase import create_client, Client
 import os
+from fastapi import FastAPI, HTTPException
+from supabase import create_client, Client
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Initialize Supabase client
-url = os.getenv("SUPABASE_URL")  # your Supabase project URL
-key = os.getenv("SUPABASE_KEY")  # your Supabase public anon key
-supabase: Client = create_client(url, key)
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_API_KEY = os.getenv("SUPABASE_API_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_API_KEY)
 
-app = FlatAPI()
+# FastAPI app instance
+app = FastAPI()
 
-# POST method for writing data
-
-
-@app.route("/write", methods=["POST"])
-async def write_data(req: Request) -> Response:
-    data = await req.json()  # expects data in JSON format
-    response = supabase.table("your_table").insert(data).execute()
-    if response.status_code == 201:
-        return Response.json({"message": "Data successfully written"}, status=201)
-    return Response.json({"error": "Failed to write data"}, status=500)
-
-# GET method for retrieving data
+# Sample data schema for POST requests
 
 
-@app.route("/get", methods=["GET"])
-async def get_data(req: Request) -> Response:
-    query_params = req.query_params
-    response = supabase.table("your_table").select("*").execute()
-    if response.status_code == 200:
-        return Response.json(response.data, status=200)
-    return Response.json({"error": "Failed to retrieve data"}, status=500)
-
-# Another POST method for automated writing data (for example, generating some default data)
+class DataInput(BaseModel):
+    id: int
+    name: str
+    value: str
 
 
-@app.route("/auto-write", methods=["POST"])
-async def auto_write_data(req: Request) -> Response:
-    # Simulate or generate data automatically
-    auto_data = {
-        "name": "Auto-generated name",
-        "value": 12345
-    }
-    response = supabase.table("your_table").insert(auto_data).execute()
-    if response.status_code == 201:
-        return Response.json({"message": "Auto data successfully written"}, status=201)
-    return Response.json({"error": "Failed to write auto data"}, status=500)
+@app.post("/new_item")
+async def new_item(data: DataInput):
+    try:
+        response = supabase.table('your_table_name').insert({
+            'id': data.id,
+            'name': data.name,
+            'value': data.value
+        }).execute()
+
+        return {"message": "Data inserted successfully", "data": response}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/get_page")
+async def get_page():
+    try:
+        response = supabase.table('your_table_name').select(
+            "*").eq("id", id).execute()
+
+        if len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="Data not found")
+
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/request_item/{id}")
+async def request_item(id: int):
+    try:
+        response = supabase.table('your_table_name').select(
+            "*").eq("id", id).execute()
+
+        if len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="Data not found")
+
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/automated_new_item")
+async def automated_write():
+    try:
+        # Example: Automatically generate data (e.g., adding a timestamp)
+        response = supabase.table('your_table_name').insert({
+            'name': "auto_generated_name",
+            'value': "auto_generated_value"
+        }).execute()
+
+        return {"message": "Automated data inserted", "data": response}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
