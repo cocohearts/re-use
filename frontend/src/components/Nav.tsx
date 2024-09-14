@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuthContext } from './AuthProvider';
 import { CircleUser, Menu, Search } from 'lucide-react';
+import { Dialog, DialogTrigger } from '@radix-ui/react-dialog';
+import LoginModal from './LoginModal';
 
 export default function Navbar() {
   const [user] = useAuthContext();
@@ -28,10 +30,14 @@ export default function Navbar() {
             user ? (
               null // put a PFP here later.
             ) : (
-              <CircleUser />
+              <Dialog>
+                <DialogTrigger>
+                  <CircleUser className="cursor-pointer" />
+                </DialogTrigger>
+                <LoginModal />
+              </Dialog>
             )
           }
-          {/* Profile here? */}
         </div>
       </div>
     </div>
