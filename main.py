@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 # Load environment variables from .env file
 load_dotenv()
@@ -37,7 +37,7 @@ class ItemInput(BaseModel):
     quality: str
     name: str
     description: str
-    photo_url: str
+    photo_urls: List[str]
 
 
 
@@ -88,7 +88,7 @@ async def create_item(data: ItemInput):
             supabase.table("items")
             .insert({
                 "seller_id": data.seller_id,
-                "photo_url": data.photo_url,
+                "photo_urls": data.photo_urls,
                 "quality": data.quality,
                 "name": data.name,
                 "description": data.description,
@@ -108,7 +108,7 @@ async def edit_item(item_id: str, data: ItemInput):
         response = (
             supabase.table("items")
             .update({
-                "photo_url": data.photo_url,
+                "photo_urls": data.photo_urls,
                 "quality": data.quality,
                 "name": data.name,
                 "description": data.description,
@@ -185,7 +185,7 @@ async def get_item(item_id: str):
 
     Returns:
         - message (str): Result message.
-        - data (dict): Item information including id, seller_id, photo_url, quality, name, description.
+        - data (dict): Item information including id, seller_id, photo_urls, quality, name, description.
     """
     try:
         response = supabase.table("items").select("*").eq("id", item_id).execute()
