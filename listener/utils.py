@@ -41,9 +41,8 @@ class Email:
         return {
             "created_at": self.date,
             "email": self.from_,
-            "name": self.name,
-            "description": self.subject,
-            "long_description": self.body,
+            "name": self.subject,
+            "description": self.body,
             "location": self.location,
             "photo_urls": self.links
         }
@@ -92,10 +91,6 @@ def parse_body(email_body: str) -> str:
         
         Remember: If the location is not found, return "Location not found"."""
 
-        system_prompt_2 = """You are a helpful assistant that extracts geolocation from a description of a location near MIT. Use the following format:
-        Latitude: xx.xxxxxx
-        Longitude: xx.xxxxxx
-        """
         messages = [
             {"role": "system", "content": system_prompt_1},
             {"role": "user", "content": f"What is the drop-off location mentioned in this email body?\n\n{email_body}"}
@@ -111,27 +106,30 @@ def parse_body(email_body: str) -> str:
         content = response.choices[0].message.content
 
         print("Building: ", content)
+        return content
 
-        messages = [
-            {"role": "system", "content": system_prompt_2},
-            {"role": "user", "content": content}
-        ]
+        # system_prompt_2 = """You are a helpful assistant that extracts geolocation from a description of a location near MIT. Use the following format:
+        # Latitude: xx.xxxxxx
+        # Longitude: xx.xxxxxx
+        # """
+        # messages = [
+        #     {"role": "system", "content": system_prompt_2},
+        #     {"role": "user", "content": content}
+        # ]
 
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages
-        )
+        # response = client.chat.completions.create(
+        #     model="gpt-4o",
+        #     messages=messages
+        # )
 
-        text = response.choices[0].message.content
-        match = re.search(
-            r'Latitude: (\d+\.\d+)\nLongitude: (-?\d+\.\d+)', text)
-        print(text)
-        if match:
-            print("matched!")
-            latitude = float(match.group(1))
-            longitude = float(match.group(2))
-
-        return f"POINT({longitude} {latitude})"
+        # text = response.choices[0].message.content
+        # match = re.search(
+        #     r'Latitude: (\d+\.\d+)\nLongitude: (-?\d+\.\d+)', text)
+        # print(text)
+        # if match:
+        #     print("matched!")
+        #     latitude = float(match.group(1))
+        #     longitude = float(match.group(2))
 
     except Exception as e:
         print(f"Error in parsing body with ChatGPT: {str(e)}")
@@ -141,10 +139,19 @@ def parse_body(email_body: str) -> str:
 def parse_logs(log_text: str) -> List[Email]:
     emails = []
     current_email = []
+    inside_digest = False
 
     for line in log_text.splitlines():
+        if inside_digest:
+            if line.startswith("End of Reuse Digest"):
+                inside_digest = False
+            continue
         words = line.split()
         if len(words) >= 3 and words[0] == "From:":
+            if words[1] == "Reuse":
+                inside_digest = True
+                continue
+
             if current_email:
                 emails.append('\n'.join(current_email))
                 current_email = []
@@ -158,7 +165,7 @@ def parse_logs(log_text: str) -> List[Email]:
         emails.append('\n'.join(current_email))
 
     parsed_emails = []
-    for email_text in emails:
+    for email_text in emails[:15]:
         sender_name = ""
         lines = email_text.split('\n')
         body_lines = []
@@ -167,20 +174,35 @@ def parse_logs(log_text: str) -> List[Email]:
         for line in lines:
             if line.startswith('From:'):
                 email_from = line[5:].strip()
-                # Check for parentheses and extract name if present
-                if '(' in email_from and ')' in email_from:
-                    name_start = email_from.index('(') + 1
-                    name_end = email_from.index(')')
-                    sender_name = email_from[name_start:name_end].strip()
-                    # Remove parentheses and name
-                    email_from = email_from[:name_start-1].strip()
+                if "mit" in email_from.lower():
+                    # Check for parentheses and extract name if present
+                    if '(' in email_from and ')' in email_from:
+                        name_start = email_from.index('(') + 1
+                        name_end = email_from.index(')')
+                        sender_name = email_from[name_start:name_end].strip()
+                        # Remove parentheses and name
+                        email_from = email_from[:name_start-1].strip()
 
-                if email_from.startswith('Reuse'):
-                    email_from = 'Reuse'
-                # Replace 'at' with '@' in email address
-                if ' at ' in email_from:
-                    username, domain = email_from.split(' at ')
-                    email_from = f"{username}@{domain}"
+                    if email_from.startswith('Reuse'):
+                        email_from = 'Reuse'
+                    # Replace 'at' with '@' in email address
+                    if ' at ' in email_from:
+                        username, domain = email_from.split(' at ')
+                        email_from = f"{username}@{domain}"
+
+                else:
+                    # Ask GPT-4 to fetch the name and email address
+                    prompt = f"Extract the name and email address from this string: '{email_from}'. Format the response as 'Name: [name], Email: [email]'"
+                    response = client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[{"role": "user", "content": prompt}]
+                    )
+                    result = response.choices[0].message.content
+                    name_match = re.search(r'Name: (.+),', result)
+                    email_match = re.search(r'Email: (.+)', result)
+                    if name_match and email_match:
+                        sender_name = name_match.group(1).strip()
+                        email_from = email_match.group(1).strip()
 
             elif line.startswith('Date:'):
                 email_date = line[5:].strip()
@@ -197,14 +219,24 @@ def parse_logs(log_text: str) -> List[Email]:
             elif in_body:
                 body_lines.append(line)
 
+        # Post-processing
         if email_subject.startswith('Reuse Digest'):
             continue
 
         email_body = '\n'.join(body_lines).strip()
-        email_location = parse_body(email_body)
+
+        prompt = f"Check if this email is actually offering a reuse opportunity, i.e. is giving something out for free. If it is confirming that something is claimed or is providing additional information about what is available, it is NOT a reuse opportunity. If it is an opportunity, return 'True'. If not an opportunity, return 'False'. Here is the email: {email_body} Is this a reuse opportunity? Format the response as 'True' or 'False'."
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        result = response.choices[0].message.content
+        if result.lower() == "false":
+            print("Skipping non-opportunity email: ", email_body)
+            continue
 
         email = Email(email_subject, email_from,
-                      email_date, email_body, email_location, sender_name)
+                      email_date, email_body, "No known location", sender_name)
 
         # Regular expression pattern to match URLs
         url_pattern = re.compile(
@@ -229,6 +261,8 @@ def parse_logs(log_text: str) -> List[Email]:
 
 
 def write_to_db(email: Email):
+    email_location = parse_body(email.body)
+    email.location = email_location
     email_json = email.to_json()
     print(email_json)
     supabase.table("items").insert(email.to_json()).execute()
