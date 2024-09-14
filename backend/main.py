@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -16,6 +17,18 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 # FastAPI app instance
 app = FastAPI()
 
+origins = [
+    "http://localhost:5173",
+    "http://localhost:8000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Schema for creating a user
 class CreateUserInput(BaseModel):
