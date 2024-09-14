@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useAuthContext } from '@/components/AuthProvider';
 
 export default function ProfilePage() {
-  useEffect(() => {
-    console.log('hello world');
-  });
+  const { token: authToken } = useAuthContext();
+  console.log('authToken:', authToken);
+
+  // Pull profile data from server
 
   return (
     <div className="px-4">

@@ -4,8 +4,6 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 
 const supabaseProjectId = import.meta.env.VITE_PROJECT_REF;
 
-console.log(supabaseProjectId);
-
 const AuthContext = createContext<{
   user: User | null;
   token: any;
@@ -20,6 +18,8 @@ export default function AuthProvider(props: { children: React.ReactNode }) {
   useEffect(() => {
     supabase.auth.getUser().then((result) => {
       setCurrentUser(result.data.user);
+
+      // Get auth token for passing to server on all endpoints that require authentication
       const token = getToken();
       setAuthToken(token);
     });
