@@ -5,7 +5,7 @@ import { Dialog, DialogTrigger } from '@radix-ui/react-dialog';
 import LoginModal from './LoginModal';
 
 export default function Navbar() {
-  const [user] = useAuthContext();
+  const { user } = useAuthContext();
   const [searchQuery, setSearchQuery] = useState<string>('');
   return (
     <div className="flex w-full justify-center p-4">
