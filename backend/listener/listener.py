@@ -22,6 +22,5 @@ def update_db():
             write_to_db(email)
 
 
-update_db()
-
-# if __name__ == "__main__":
+if __name__ == "__main__":
+    update_db()
