@@ -105,6 +105,8 @@ async def create_item(data: ItemInput):
                 "quality": data.quality,
                 "name": data.name,
                 "description": data.description,
+                "location": data.location,
+                "email": data.email
             })
             .execute()
         )
@@ -113,7 +115,7 @@ async def create_item(data: ItemInput):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# Edit item: update only the photo URL in the database
+
 @app.put("/edit-item/{item_id}")
 async def edit_item(item_id: str, data: ItemInput):
     try:
@@ -125,6 +127,8 @@ async def edit_item(item_id: str, data: ItemInput):
                 "quality": data.quality,
                 "name": data.name,
                 "description": data.description,
+                "location": data.location,
+                "email": data.email
             })
             .eq("id", item_id)  # Assuming item_id is the identifier for the item
             .execute()
@@ -147,6 +151,14 @@ async def set_user_karma(user_id: str, karma: float):
             raise HTTPException(status_code=404, detail="User not found")
 
         return {"message": "User karma updated successfully", "data": response}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/get-user-karma/{user_id}")
+async def get_user_karma(user_id: str):
+    try:
+        response = supabase.table("users").select("karma").eq("id", user_id).execute()
+        return {"message": "User karma retrieved successfully", "data": response.data[0]}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -190,6 +202,22 @@ async def get_all_items_ids():
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.get("/get-all-items")
+async def get_all_items():
+    """
+    Get all items from the database.
+
+    Returns a message and a list of all items.
+
+    Raises:
+        HTTPException: If there is an error, a 400 status code is returned.
+    """
+    try:
+        response = supabase.table("items").select("*").execute()
+        return {"message": "Items retrieved successfully", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 # Get data given item id
 @app.get("/get-item/{item_id}")
 async def get_item(item_id: str):
@@ -207,6 +235,33 @@ async def get_item(item_id: str):
         return {"message": "Item retrieved successfully", "data": response.data[0]}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/get-items/{item_ids}")
+async def get_items(item_ids: List[str]):
+    """
+    Retrieve multiple items by their IDs.
+
+    Returns:
+        - message (str): Result message.
+        - data (list): List of item information including id, seller_id, photo_urls, quality, name, description.
+    """
+    try:
+        response = supabase.table("items").select("*").in_("id", item_ids).execute()
+        return {"message": "Items retrieved successfully", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+#Returns all items with a similar name
+@app.get("/search-items-by-name/{name}")
+async def search_items_by_name(name: str):
+    try:
+        # Use ilike to search for items where the name contains the search term, case-insensitive
+        response = supabase.table("items").select("*").ilike("name", f"%{name}%").execute()
+        
+        return {"message": "Items retrieved successfully", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn
