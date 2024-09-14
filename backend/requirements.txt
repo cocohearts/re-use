@@ -4,3 +4,4 @@ python-dotenv
 imapclient
 uvicorn
 pydantic
+gunicorn
