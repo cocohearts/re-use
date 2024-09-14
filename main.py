@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -20,6 +20,8 @@ app = FastAPI()
 # Schema for creating a user
 class CreateUserInput(BaseModel):
     email: str
+    name: str
+    pfp_url: str
 
 
 # Schema for creating a transaction
@@ -35,6 +37,8 @@ class ItemInput(BaseModel):
     quality: str
     name: str
     description: str
+    photo_url: str
+
 
 
 # Create user: given email, set karma to 0
@@ -77,31 +81,18 @@ async def create_new_transaction(data: CreateTransactionInput):
 
 # Create item: upload photo to item_photos bucket, save item in DB
 @app.post("/create_item")
-async def create_item(
-        photo: UploadFile = File(...),
-        data: ItemInput = File(...)):
+async def create_item(data: ItemInput):
     try:
-        # Upload photo to Supabase storage bucket
-        photo_path = f"item_photos/{photo.filename}"
-        upload_response = (
-            supabase.storage().from_("item_photos").upload(
-                photo_path, photo.file))
-
-        if upload_response.get("error"):
-            raise HTTPException(status_code=400, detail="Photo upload failed")
-
         # Insert item data into the items table
         response = (
             supabase.table("items")
-            .insert(
-                {
-                    "seller_id": data.seller_id,
-                    "photo_url": photo_path,
-                    "quality": data.quality,
-                    "name": data.name,
-                    "description": data.description,
-                }
-            )
+            .insert({
+                "seller_id": data.seller_id,
+                "photo_url": data.photo_url,
+                "quality": data.quality,
+                "name": data.name,
+                "description": data.description,
+            })
             .execute()
         )
 
@@ -109,41 +100,27 @@ async def create_item(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
-# Edit item: given item id and same fields as create_item, edit the item
+# Edit item: update only the photo URL in the database
 @app.put("/edit_item/{item_id}")
-async def edit_item(
-        item_id: str,
-        data: ItemInput,
-        photo: Optional[UploadFile] = None):
+async def edit_item(item_id: str, data: ItemInput):
     try:
-        update_data = {
-            "seller_id": data.seller_id,
-            "quality": data.quality,
-            "name": data.name,
-            "description": data.description,
-        }
-
-        # If a new photo is uploaded, handle the photo update
-        if photo:
-            photo_path = f"item_photos/{item_id}_{photo.filename}"
-            upload_response = (
-                supabase.storage().from_("item_photos").upload(
-                    photo_path, photo.file))
-
-            if upload_response.get("error"):
-                raise HTTPException(
-                    status_code=400, detail="Photo upload failed")
-
-            update_data["photo_url"] = photo_path
-
-        # Update the item in the database
-        response = (supabase.table("items").update(
-            update_data).eq("id", item_id).execute())
+        # Update item data in the items table
+        response = (
+            supabase.table("items")
+            .update({
+                "photo_url": data.photo_url,
+                "quality": data.quality,
+                "name": data.name,
+                "description": data.description,
+            })
+            .eq("id", item_id)  # Assuming item_id is the identifier for the item
+            .execute()
+        )
 
         return {"message": "Item updated successfully", "data": response}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 
 # Set user karma: given user id, set karma
@@ -160,8 +137,64 @@ async def set_user_karma(user_id: str, karma: float):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.get("/get_user/{user_id}")
+async def get_user(user_id: str):
+    """
+    Retrieve user data by user ID.
+
+    Returns:
+        - message (str): Result message.
+        - data (dict): User information including id, username, email, karma, created_at, updated_at.
+    """
+    try:
+        response = supabase.table("users").select("*").eq("id", user_id).execute()
+
+        if len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        user_data = response.data[0]  # Assuming the response contains a list of users
+        return {
+            "message": "User retrieved successfully",
+            "data": user_data  # Return the entire user_data dictionary
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Get all items ids
+@app.get("/get_all_items_ids")
+async def get_all_items_ids():
+    """
+    Get all item IDs from the database.
+
+    Returns a message and a list of item IDs.
+
+    Raises:
+        HTTPException: If there is an error, a 400 status code is returned.
+    """
+    try:
+        response = supabase.table("items").select("id").execute()
+        return {"message": "Items retrieved successfully", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Get data given item id
+@app.get("/get_item/{item_id}")
+async def get_item(item_id: str):
+    """
+    Retrieve item data by item ID.
+
+    Returns:
+        - message (str): Result message.
+        - data (dict): Item information including id, seller_id, photo_url, quality, name, description.
+    """
+    try:
+        response = supabase.table("items").select("*").eq("id", item_id).execute()
+        if len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="Item not found")
+        return {"message": "Item retrieved successfully", "data": response.data[0]}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)
