@@ -5,11 +5,16 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import NotFound from '@/routes/404';
 import AuthProvider from './components/AuthProvider';
 import Navbar from './components/Nav';
+import SigninLink from './routes/Signin';
 
 const router = createBrowserRouter([
   {
     path: '/',
     element: <div className="bg-blue-300 text-white">Test</div>,
+  },
+  {
+    path: '/login',
+    element: <SigninLink />,
   },
   {
     path: '*',
