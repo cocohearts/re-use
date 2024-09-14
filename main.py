@@ -8,8 +8,8 @@ load_dotenv()
 
 # Initialize Supabase client
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_API_KEY = os.getenv("SUPABASE_API_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_API_KEY)
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 # FastAPI app instance
 app = FastAPI()
