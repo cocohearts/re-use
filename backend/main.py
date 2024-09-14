@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -236,32 +236,84 @@ async def get_item(item_id: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/get-items/{item_ids}")
-async def get_items(item_ids: List[str]):
+# @app.get("/get-items/")
+# async def get_items(item_ids: List[str] = Query(...)):
+#     """
+#     Retrieve multiple items by their IDs.
+
+#     Args:
+#         item_ids (List[str]): List of item IDs to retrieve.
+
+#     Returns:
+#         - message (str): Result message.
+#         - data (list): List of item information including id, seller_id, photo_urls, quality, name, description.
+#     """
+#     try:
+#         response = supabase.table("items").select("*").in_("id", item_ids).execute()
+#         return {"message": "Items retrieved successfully", "data": response.data}
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=str(e))
+
+# Returns paginated items with a similar name
+@app.get("/search-items-by-name/{name}")
+async def search_items_by_name(name: str, page: int = 1, page_size: int = 5):
     """
-    Retrieve multiple items by their IDs.
+    Search for items by name with pagination.
+
+    Args:
+        name (str): The search term.
+        page (int): The page number (default: 1).
+        page_size (int): The number of items per page (default: 5, max: 5).
 
     Returns:
-        - message (str): Result message.
-        - data (list): List of item information including id, seller_id, photo_urls, quality, name, description.
+        A message and the paginated list of items.
     """
     try:
-        response = supabase.table("items").select("*").in_("id", item_ids).execute()
-        return {"message": "Items retrieved successfully", "data": response.data}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-#Returns all items with a similar name
-@app.get("/search-items-by-name/{name}")
-async def search_items_by_name(name: str):
-    try:
-        # Use ilike to search for items where the name contains the search term, case-insensitive
-        response = supabase.table("items").select("*").ilike("name", f"%{name}%").execute()
+        # Validate page_size (max 5)
+        page_size = min(page_size, 5)
         
+        # Calculate the offset for pagination
+        offset = (page - 1) * page_size
+
+        # Use ilike to search for items where the name contains the search term, case-insensitive
+        response = (
+            supabase.table("items")
+            .select("*")
+            .ilike("name", f"%{name}%")
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
+
         return {"message": "Items retrieved successfully", "data": response.data}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# Get number of pages for a given search query
+@app.get("/get-number-of-pages/{name}")
+async def get_number_of_pages(name: str, page_size: int = 5):
+    """
+    Calculate the total number of pages required for a given search query.
+
+    Args:
+        name (str): The search term.
+        page_size (int): The number of items per page (default: 5, max: 5).
+
+    Returns:
+        A message and the total number of pages.
+    """
+    try:
+        # Validate page_size (max 5)
+        page_size = min(page_size, 5)
+
+        # Get the total count of items matching the search term
+        response = supabase.table("items").select("id", count="exact").ilike("name", f"%{name}%").execute()
+
+        total_items = response.count  # Supabase includes the total count in the response
+        total_pages = (total_items + page_size - 1) // page_size  # Calculate total number of pages
+
+        return {"message": "Total number of pages calculated successfully", "data": {"total_pages": total_pages}}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
