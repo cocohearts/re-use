@@ -14,6 +14,7 @@ export default defineConfig({
       "/api": "http://localhost:5000",
     },
   },
+  envDir: "..",
   build: {
     outDir: "../dist",
   },
