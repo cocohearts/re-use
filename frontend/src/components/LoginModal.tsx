@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { DialogClose } from '@radix-ui/react-dialog';
 
 export default function LoginModal() {
   const [kerb, setKerb] = useState<string>('');

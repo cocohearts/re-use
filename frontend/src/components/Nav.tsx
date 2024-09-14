@@ -3,10 +3,13 @@ import { useAuthContext } from './AuthProvider';
 import { CircleUser, Menu, Search } from 'lucide-react';
 import { Dialog, DialogTrigger } from '@radix-ui/react-dialog';
 import LoginModal from './LoginModal';
+import { useNavigate } from 'react-router-dom';
 
 export default function Navbar() {
   const { user } = useAuthContext();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState<string>('');
+
   return (
     <div className="flex w-full justify-center p-4">
       <div className="flex w-full flex-row items-center justify-between gap-2">
@@ -22,6 +25,11 @@ export default function Navbar() {
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyUp={(e) => {
+                if (e.key === "Enter") {
+                  navigate("/?q=" + searchQuery)
+                }
+              }}
               placeholder="search"
             />
           </div>

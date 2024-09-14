@@ -7,11 +7,12 @@ import AuthProvider from './components/AuthProvider';
 import Navbar from './components/Nav';
 import SigninLink from './routes/Signin';
 import ProfilePage from './routes/Profile';
+import Browse from './routes/Browse';
 
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <div className="bg-blue-300 text-white">Test</div>,
+    element: <Browse />,
   },
   {
     path: '/login',
