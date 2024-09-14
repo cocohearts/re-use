@@ -27,7 +27,9 @@ createRoot(document.getElementById('root')!).render(
     {/*We should probably include some kind of wrapper here*/}
     <AuthProvider>
       <Navbar />
-      <RouterProvider router={router} />
+      <div className="mx-auto w-[clamp(0px,900px,90%)]">
+        <RouterProvider router={router} />
+      </div>
     </AuthProvider>
   </StrictMode>,
 );
