@@ -55,7 +55,7 @@ class ItemInput(BaseModel):
 
 
 # Create user: given email, set karma to 0
-@app.post("/create_user")
+@app.post("/create-user")
 async def create_user(data: CreateUserInput):
     try:
         response = (
@@ -70,7 +70,7 @@ async def create_user(data: CreateUserInput):
 
 
 # Create transaction: given buyer_id, seller_id, item_id
-@app.post("/create_new_transaction")
+@app.post("/create-new-transaction")
 async def create_new_transaction(data: CreateTransactionInput):
     try:
         response = (
@@ -93,7 +93,7 @@ async def create_new_transaction(data: CreateTransactionInput):
 
 
 # Create item: upload photo to item_photos bucket, save item in DB
-@app.post("/create_item")
+@app.post("/create-item")
 async def create_item(data: ItemInput):
     try:
         # Insert item data into the items table
@@ -114,7 +114,7 @@ async def create_item(data: ItemInput):
         raise HTTPException(status_code=400, detail=str(e))
 
 # Edit item: update only the photo URL in the database
-@app.put("/edit_item/{item_id}")
+@app.put("/edit-item/{item_id}")
 async def edit_item(item_id: str, data: ItemInput):
     try:
         # Update item data in the items table
@@ -137,7 +137,7 @@ async def edit_item(item_id: str, data: ItemInput):
 
 
 # Set user karma: given user id, set karma
-@app.post("/set_user_karma/{user_id}")
+@app.post("/set-user-karma/{user_id}")
 async def set_user_karma(user_id: str, karma: float):
     try:
         response = (supabase.table("users").update(
@@ -150,7 +150,7 @@ async def set_user_karma(user_id: str, karma: float):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/get_user/{user_id}")
+@app.get("/get-user/{user_id}")
 async def get_user(user_id: str):
     """
     Retrieve user data by user ID.
@@ -174,7 +174,7 @@ async def get_user(user_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 # Get all items ids
-@app.get("/get_all_items_ids")
+@app.get("/get-all-items-ids")
 async def get_all_items_ids():
     """
     Get all item IDs from the database.
@@ -191,7 +191,7 @@ async def get_all_items_ids():
         raise HTTPException(status_code=400, detail=str(e))
 
 # Get data given item id
-@app.get("/get_item/{item_id}")
+@app.get("/get-item/{item_id}")
 async def get_item(item_id: str):
     """
     Retrieve item data by item ID.
