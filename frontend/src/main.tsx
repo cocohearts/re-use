@@ -9,22 +9,47 @@ import SigninLink from './routes/Signin';
 import ProfilePage from './routes/Profile';
 import Browse from './routes/Browse';
 
+const Wrapper = ({ children }: any) => {
+  return (
+    <div className="mx-auto w-full max-w-4xl">
+      <Navbar />
+      {children}
+    </div>
+  );
+};
+
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <Browse />,
+    element: (
+      <Wrapper>
+        <Browse />
+      </Wrapper>
+    ),
   },
   {
     path: '/login',
-    element: <SigninLink />,
+    element: (
+      <Wrapper>
+        <SigninLink />
+      </Wrapper>
+    ),
   },
   {
     path: '*',
-    element: <NotFound />,
+    element: (
+      <Wrapper>
+        <NotFound />
+      </Wrapper>
+    ),
   },
   {
     path: '/profile',
-    element: <ProfilePage />,
+    element: (
+      <Wrapper>
+        <ProfilePage />
+      </Wrapper>
+    ),
   },
 ]);
 
@@ -32,10 +57,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {/*We should probably include some kind of wrapper here*/}
     <AuthProvider>
-      <div className="mx-auto w-full max-w-4xl">
-        <Navbar />
-        <RouterProvider router={router} />
-      </div>
+      <RouterProvider router={router} />
     </AuthProvider>
   </StrictMode>,
 );

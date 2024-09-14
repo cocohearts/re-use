@@ -1,9 +1,20 @@
 import { useAuthContext } from '@/components/AuthProvider';
+import { useEffect, useState } from 'react';
 
 export default function ProfilePage() {
-  const { token: authToken } = useAuthContext();
+  const [userData, setUserData] = useState();
+
+  const { token: authToken, user } = useAuthContext();
   console.log('authToken:', authToken);
 
+  console.log('user:', user);
+
+  useEffect(() => {
+    (async () => {
+      // Fetch user data
+      await fetch('/api/get-user/');
+    })();
+  });
   // Pull profile data from server
 
   return (
