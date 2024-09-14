@@ -1,3 +1,4 @@
+import openai
 import re
 from typing import List
 import requests
@@ -24,11 +25,12 @@ supabase: Client = create_client(supabase_url, supabase_key)
 
 
 class Email:
-    def __init__(self, subject, from_, date, body, name=""):
+    def __init__(self, subject, from_, date, body, location, name=""):
         self.subject = subject
         self.from_ = from_
         self.date = date
         self.body = body
+        self.location = location
         self.name = name
         self.links = []
 
@@ -42,7 +44,8 @@ class Email:
             "name": self.name,
             "description": self.subject,
             "long_description": self.body,
-            "photo_url": self.links
+            "location": self.location,
+            "photo_urls": self.links
         }
 
 
@@ -78,6 +81,61 @@ def get_logs() -> str:
 
     # If all retries fail
     return None
+
+
+def parse_body(email_body: str) -> str:
+    try:
+        # Prepare the message for ChatGPT
+        system_prompt_1 = """You are a helpful assistant that extracts drop-off locations from email bodies. Do not include any other text in the response. Try several times to extract the drop-off location from the email body. If the location is not found, return "Location not found".
+        
+        All dropoffs happen in or around the MIT campus.
+        
+        Remember: If the location is not found, return "Location not found"."""
+
+        system_prompt_2 = """You are a helpful assistant that extracts geolocation from a description of a location near MIT. Use the following format:
+        Latitude: xx.xxxxxx
+        Longitude: xx.xxxxxx
+        """
+        messages = [
+            {"role": "system", "content": system_prompt_1},
+            {"role": "user", "content": f"What is the drop-off location mentioned in this email body?\n\n{email_body}"}
+        ]
+
+        # Make the API call to ChatGPT
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages
+        )
+
+        # Extract the assistant's reply
+        content = response.choices[0].message.content
+
+        print("Building: ", content)
+
+        messages = [
+            {"role": "system", "content": system_prompt_2},
+            {"role": "user", "content": content}
+        ]
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages
+        )
+
+        text = response.choices[0].message.content
+        match = re.search(
+            r'Latitude: (\d+\.\d+)\nLongitude: (-?\d+\.\d+)', text)
+        print(text)
+        if match:
+            print("matched!")
+            latitude = float(match.group(1))
+            longitude = float(match.group(2))
+
+        return f"POINT({longitude} {latitude})"
+
+    except Exception as e:
+        print(f"Error in parsing body with ChatGPT: {str(e)}")
+        return "Location not found"
 
 
 def parse_logs(log_text: str) -> List[Email]:
@@ -143,8 +201,10 @@ def parse_logs(log_text: str) -> List[Email]:
             continue
 
         email_body = '\n'.join(body_lines).strip()
+        email_location = parse_body(email_body)
+
         email = Email(email_subject, email_from,
-                      email_date, email_body, sender_name)
+                      email_date, email_body, email_location, sender_name)
 
         # Regular expression pattern to match URLs
         url_pattern = re.compile(
@@ -170,6 +230,7 @@ def parse_logs(log_text: str) -> List[Email]:
 
 def write_to_db(email: Email):
     email_json = email.to_json()
+    print(email_json)
     supabase.table("items").insert(email.to_json()).execute()
 
 
@@ -177,7 +238,7 @@ if __name__ == "__main__":
     supabase.table("items").delete().neq(
         'id', '00000000-0000-0000-0000-000000000000').execute()
     emails = parse_logs(get_logs())
-    for email in emails[:5]:
+    for email in emails[:1]:
         print(email)
         print("———————————————————————————————————————————————————————————")
 
