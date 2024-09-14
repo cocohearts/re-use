@@ -6,7 +6,7 @@ export default function Navbar() {
   const [user] = useAuthContext();
   const [searchQuery, setSearchQuery] = useState<string>("");
   return (
-    <div className="w-full bg-[#EFF3EC] flex justify-center py-2">
+    <div className="w-full bg-[#EFF3EC] flex justify-center p-2">
       <div className="flex flex-row justify-between gap-2 w-[min(100%,600px)] items-center">
         <div>
           <Menu />
