@@ -242,7 +242,7 @@ export default function AddItemPage() {
               <SelectItem value="new">new</SelectItem>
               <SelectItem value="like new">like new</SelectItem>
               <SelectItem value="good">good</SelectItem>
-              <SelectItem value="bad">decent</SelectItem>
+              <SelectItem value="decent">decent</SelectItem>
               <SelectItem value="unspecified">unspecified</SelectItem>
             </SelectContent>
           </Select>

@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { Tables } from '../../database.types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CircleUser, MailOpen, MapPin, Star } from 'lucide-react';
+import {
+  CircleUser,
+  MailOpen,
+  MapPin,
+  Sparkles,
+  Star,
+  Tag,
+} from 'lucide-react';
 import { get, post } from '@/lib/utils';
 import { useAuthContext } from '@/components/AuthProvider';
 import {
@@ -144,9 +151,25 @@ export default function SingleItem() {
         </>
       )}
       <h1 className="my-2 text-xl text-pine-900">{item.name.slice(0, 100)}</h1>
-      <div className="my-2 text-lg text-pine-900">{item.quality}</div>
+      <div className="my-2 flex items-center gap-2 text-lg text-pine-900">
+        <Sparkles className="inline" size={16} />
+        {item.quality}
+      </div>
       <div className="my-2 flex items-center gap-2 text-lg text-pine-900">
         <MapPin className="inline" size={16} /> {item.location}
+      </div>
+      <div className="flex items-center gap-2">
+        <Tag className="ml-0.5 shrink-0 stroke-pine-900" size={16} />
+        <div className="flex flex-nowrap gap-2 overflow-x-auto">
+          {item.tags &&
+            item.tags.map((tag: string) => {
+              return (
+                <div className="text-nowrap rounded-full bg-pine-50 px-3 py-1 text-pine-900">
+                  {tag}
+                </div>
+              );
+            })}
+        </div>
       </div>
       <div className="flex flex-col items-center justify-center">
         {user?.id && seller?.id !== user?.id && (
