@@ -68,7 +68,16 @@ class ItemInput(BaseModel):
     quality: str
     name: str
     description: str
+    other_urls: List[str]
     photo_urls: List[str]
+    can_self_pickup: bool
+
+
+
+class BidInput(BaseModel):
+    bidder_id: str
+    created_at: str
+    item_id: str
 
 
 # Create user: given email, set karma to 0
@@ -119,6 +128,8 @@ async def create_item(data: ItemInput):
             .insert({
                 "seller_id": data.seller_id,
                 "photo_urls": data.photo_urls,
+                "can_self_pickup": data.can_self_pickup,
+                "other_urls": data.other_urls,
                 "quality": data.quality,
                 "name": data.name,
                 "description": data.description,
@@ -133,7 +144,76 @@ async def create_item(data: ItemInput):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@api.put("/edit-item/{item_id}")
+@api.post("/api/bid-for-item/{item_id}")
+async def bid_for_item(item_id: str, data: BidInput):
+    try:
+        assert data.item_id == item_id
+        # Insert bid data into the bids table
+        response = (
+            supabase.table("bids")
+            .insert({
+                "bidder_id": data.bidder_id,
+                "created_at": data.created_at,
+                "item_id": data.item_id,
+            })
+            .execute()
+        )
+
+        return {"message": "Bid created successfully", "data": response}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/get-bids-for-item/{item_id}")
+async def get_bids_for_item(item_id: str):
+    try:
+        response = supabase.table("bids").select(
+            "*").eq("item_id", item_id).execute()
+        return {"message": "Bids retrieved successfully", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/accept-bid/{bid_id}")
+async def accept_bid(bid_id: str):
+    try:
+        # Update bid data in the bids table
+        response = (
+            supabase.table("bids")
+            .update({
+                "accepted": True,
+            })
+            .eq("id", bid_id)  # Assuming bid_id is the identifier for the bid
+            .execute()
+        )
+
+        return {"message": "Bid updated successfully", "data": response}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/get-accepted-bids-as-seller/{user_id}")
+async def get_accepted_bids_as_seller(user_id: str):
+    try:
+        response = supabase.table("bids").select(
+            "*").eq("seller_id", user_id).eq("accepted", True).execute()
+        return {"message": "Accepted bids retrieved successfully", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/get-accepted-bids-as-buyer/{user_id}")
+async def get_accepted_bids_as_buyer(user_id: str):
+    try:
+        response = supabase.table("bids").select(
+            "*").eq("buyer_id", user_id).eq("accepted", True).execute()
+        return {"message": "Accepted bids retrieved successfully", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@api.put("/api/edit-item/{item_id}")
 async def edit_item(item_id: str, data: ItemInput):
     try:
         # Update item data in the items table
@@ -141,6 +221,8 @@ async def edit_item(item_id: str, data: ItemInput):
             supabase.table("items")
             .update({
                 "photo_urls": data.photo_urls,
+                "can_self_pickup": data.can_self_pickup,
+                "other_urls": data.other_urls,
                 "quality": data.quality,
                 "name": data.name,
                 "description": data.description,
