@@ -9,7 +9,7 @@ RUN python3 -m venv /app/venv
 
 COPY ./backend/requirements.txt /app/backend/requirements.txt
 COPY ./frontend/package.json /app/frontend/package.json
-COPY ./frontend/package-lock.json /app/frontend/package.json
+COPY ./frontend/package-lock.json /app/frontend/package-lock.json
 
 RUN /app/venv/bin/pip install -r /app/backend/requirements.txt
 RUN cd /app/frontend && npm install
