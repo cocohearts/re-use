@@ -33,14 +33,17 @@ def verify_access_token(request):
     access_token = authorization.split(" ")[1]
 
     if access_token:
-        payload = jwt.decode(
-            access_token,
-            key=SUPABASE_JWT_SECRET,
-            do_verify=True,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )["user_metadata"]
-        return payload
+        try:
+            payload = jwt.decode(
+                access_token,
+                key=SUPABASE_JWT_SECRET,
+                do_verify=True,
+                algorithms=["HS256"],
+                audience="authenticated",
+            )["user_metadata"]
+            return payload
+        except:
+            return None
 
     return None
 

@@ -70,9 +70,9 @@ class ItemInput(BaseModel):
     quality: str
     name: str
     description: str
-    other_urls: List[str]
+    other_urls: List[str] = []
     photo_urls: List[str]
-    can_self_pickup: bool
+    can_self_pickup: bool = False
 
 
 class BidInput(BaseModel):
