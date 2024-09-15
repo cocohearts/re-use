@@ -1,13 +1,14 @@
+import NotFound from '@/routes/404';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import './index.css';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import NotFound from '@/routes/404';
 import AuthProvider from './components/AuthProvider';
 import Navbar from './components/Nav';
-import SigninLink from './routes/Signin';
-import ProfilePage from './routes/Profile';
+import './index.css';
+import AddItemPage from './routes/AddItem';
 import Browse from './routes/Browse';
+import ProfilePage from './routes/Profile';
+import SigninLink from './routes/Signin';
 import SingleItem from './routes/SingleItem';
 
 const Wrapper = ({ children }: any) => {
@@ -57,6 +58,14 @@ const router = createBrowserRouter([
     element: (
       <Wrapper>
         <ProfilePage />
+      </Wrapper>
+    ),
+  },
+  {
+    path: '/add-item',
+    element: (
+      <Wrapper>
+        <AddItemPage />
       </Wrapper>
     ),
   },
