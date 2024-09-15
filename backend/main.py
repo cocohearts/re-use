@@ -191,7 +191,7 @@ async def cancel_bid(item_id: str, request: Request):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@ app.get("/get-bids-for-item/{item_id}")
+@ api.get("/get-bids-for-item/{item_id}")
 async def get_bids_for_item(item_id: str):
     try:
         response = supabase.table("bids").select(
@@ -201,7 +201,7 @@ async def get_bids_for_item(item_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/accept-bid/{bid_id}")
+@api.post("/accept-bid/{bid_id}")
 async def accept_bid(bid_id: str):
     try:
         # Check the current state of the bid before updating
@@ -233,7 +233,7 @@ async def accept_bid(bid_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@ app.get("/get-accepted-bids-as-seller/{user_id}")
+@ api.get("/get-accepted-bids-as-seller/{user_id}")
 async def get_accepted_bids_as_seller(user_id: str):
     try:
         response = supabase.table("bids").select(
@@ -243,7 +243,7 @@ async def get_accepted_bids_as_seller(user_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@ app.get("/get-accepted-bids-as-buyer/{user_id}")
+@ api.get("/get-accepted-bids-as-buyer/{user_id}")
 async def get_accepted_bids_as_buyer(user_id: str):
     try:
         response = supabase.table("bids").select(
