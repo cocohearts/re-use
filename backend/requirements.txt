@@ -6,4 +6,3 @@ uvicorn
 pydantic
 gunicorn
 PyJWT
-datetime
