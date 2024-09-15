@@ -6,7 +6,7 @@ from backend.auth_middleware import get_current_user
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Annotated, Optional, List
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from backend.mailer import utils as mailerutils
@@ -124,8 +124,9 @@ async def create_new_transaction(data: CreateTransactionInput):
 async def create_item(data: ItemInput, request: Request):
     user = get_current_user(request)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthenticated users cannot make listings.")
-    
+        raise HTTPException(
+            status_code=401, detail="Unauthenticated users cannot make listings.")
+
     seller_id = user["sub"]
     seller_email = user["email"]
 
@@ -154,10 +155,12 @@ async def create_item(data: ItemInput, request: Request):
 
 
 @api.post("/bid-for-item/{item_id}")
-async def bid_for_item(item_id: str, bidder_id: str = Depends(get_current_user)):
-    if bidder_id is None:
+async def bid_for_item(item_id: str, request: Request):
+    bidder = get_current_user(request)
+    if bidder is None:
         raise HTTPException(
             status_code=403, detail="You can't bid for items without registering")
+    bidder_id = bidder['sub']
 
     try:
         existing_bid = supabase.table("bids").select("id").eq(
@@ -177,7 +180,7 @@ async def bid_for_item(item_id: str, bidder_id: str = Depends(get_current_user))
         response = supabase.table("bids").select(
             "*").eq("item_id", item_id).execute()
 
-        return {"message": "Bid created successfully", "data": response}
+        return {"message": "Bid created successfully", "data": response.data}
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -185,17 +188,18 @@ async def bid_for_item(item_id: str, bidder_id: str = Depends(get_current_user))
 
 @ api.post("/cancel-bid/{item_id}")
 async def cancel_bid(item_id: str, request: Request):
-    bidder_id = request.state.user_id
-    if bidder_id is None:
+    bidder = get_current_user(request)
+    if bidder is None:
         raise HTTPException(
             status_code=403, detail="You can't bid for items without registering")
+    bidder_id = bidder['sub']
     try:
         # Insert bid data into the bids table
         supabase.table("bids").delete().eq(
-            "item_id", item_id).eq("bidder_id", bidder_id)
+            "item_id", item_id).eq("bidder_id", bidder_id).execute()
         response = supabase.table("bids").select(
             "*").eq("item_id", item_id).execute()
-        return {"message": "Bid deleted successfully", "data": response}
+        return {"message": "Bid deleted successfully", "data": response.data}
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -211,14 +215,32 @@ async def get_bids_for_item(item_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@api.get("/get-multiple-users")
+async def get_multiple_users(userids: Annotated[str, Query()]):
+    result = []
+    userids = userids.strip()
+    if not len(userids):
+        return {"message": "Multiple Users Found", "data": []}
+    for userid in userids.split(","):
+        query = supabase.table("users").select("*").eq("id", userid).execute()
+        print("data:", query.data)
+        result.append(
+            query.data if query is not None
+            else None
+        )
+    return {"message": "Multiple Users Found", "data": result}
+
+
 @api.post("/accept-bid/{bid_id}")
 async def accept_bid(bid_id: str):
     try:
         # Check the current state of the bid before updating
-        existing_bid = supabase.table("bids").select("bidder_id", "accepted").eq("id", bid_id).execute()
-        
+        existing_bid = supabase.table("bids").select(
+            "bidder_id", "accepted").eq("id", bid_id).execute()
+
         if not existing_bid.data or existing_bid.data[0]['accepted']:
-            raise HTTPException(status_code=400, detail="Bid has already been accepted or does not exist.")
+            raise HTTPException(
+                status_code=400, detail="Bid has already been accepted or does not exist.")
 
         bidder_id = existing_bid.data[0]['bidder_id']
 
@@ -233,7 +255,8 @@ async def accept_bid(bid_id: str):
         )
 
         # Send an email to the user whose bid was accepted
-        user_email = supabase.table("users").select("email").eq("id", bidder_id).execute().data[0]['email']
+        user_email = supabase.table("users").select("email").eq(
+            "id", bidder_id).execute().data[0]['email']
         subject = "Your Bid Has Been Accepted"
         body = f"Congratulations! Your bid for bid ID {bid_id} has been accepted."
         mailerutils.send_email(user_email, subject, body)
@@ -241,15 +264,18 @@ async def accept_bid(bid_id: str):
         return {"message": "Bid updated successfully and email sent to the bidder", "data": response}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+
+
 @api.post("/review-user/{bid_id}")
 async def review_user(bid_id: str, review: int, reviewee_id: str):
     try:
         if review < 1 or review > 5:
-            raise HTTPException(status_code=400, detail="Review must be between 1 and 5.")
+            raise HTTPException(
+                status_code=400, detail="Review must be between 1 and 5.")
 
         # Get the user associated with the bid
-        existing_bid = supabase.table("bids").select("bidder_id, item_id").eq("id", bid_id).execute()
+        existing_bid = supabase.table("bids").select(
+            "bidder_id, item_id").eq("id", bid_id).execute()
         if not existing_bid.data:
             raise HTTPException(status_code=400, detail="Bid not found.")
 
@@ -257,7 +283,8 @@ async def review_user(bid_id: str, review: int, reviewee_id: str):
         item_id = existing_bid.data[0]['item_id']
 
         # Get the seller_id from the items table using the item_id
-        existing_item = supabase.table("items").select("seller_id").eq("id", item_id).execute()
+        existing_item = supabase.table("items").select(
+            "seller_id").eq("id", item_id).execute()
         if not existing_item.data:
             raise HTTPException(status_code=400, detail="Item not found.")
 
@@ -265,7 +292,8 @@ async def review_user(bid_id: str, review: int, reviewee_id: str):
 
         # Validate the reviewee ID
         if reviewee_id not in [bidder_id, seller_id]:
-            raise HTTPException(status_code=400, detail="Reviewee ID must be either the bidder or the seller.")
+            raise HTTPException(
+                status_code=400, detail="Reviewee ID must be either the bidder or the seller.")
 
         # Adjust karma based on the review
         karma_adjustment = review - 3  # Assuming 3 is neutral
@@ -276,9 +304,6 @@ async def review_user(bid_id: str, review: int, reviewee_id: str):
         return {"message": "User karma adjusted successfully", "data": response}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
-
 
 
 @ api.get("/get-accepted-bids-as-seller/{user_id}")
