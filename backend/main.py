@@ -223,9 +223,8 @@ async def get_multiple_users(userids: Annotated[str, Query()]):
         return {"message": "Multiple Users Found", "data": []}
     for userid in userids.split(","):
         query = supabase.table("users").select("*").eq("id", userid).execute()
-        print("data:", query.data)
         result.append(
-            query.data if query is not None
+            query.data[0] if query is not None and query.data
             else None
         )
     return {"message": "Multiple Users Found", "data": result}

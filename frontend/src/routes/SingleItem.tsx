@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button, buttonVariants } from '@/components/ui/button';
+import ProfilePicture from '@/components/ProfilePicture';
 
 export default function SingleItem() {
   const { uuid } = useParams();
@@ -24,7 +25,7 @@ export default function SingleItem() {
   const [notFound, setNotFound] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [bids, setBids] = useState<Tables<'bids'>[]>([]);
-  const [bidUsers, setBidUsers] = useState<Tables<'users'>[]>([]);
+  const [bidUsers, setBidUsers] = useState<(Tables<'users'> | undefined)[]>([]);
 
   const [photoIndex, setPhotoIndex] = useState<number>(0);
   const location = useLocation();
@@ -165,22 +166,20 @@ export default function SingleItem() {
                     <div className="col-span-2">
                       <div className="flex flex-row items-center justify-between gap-3">
                         <div className="flex flex-row items-center gap-3">
-                          {bidUsers[idx].pfp_url ? (
-                            <img
-                              src={bidUsers[idx].pfp_url}
-                              className="h-10 w-10 rounded-full"
-                            />
+
+                          {bidUsers[idx] ? (
+                            <ProfilePicture user={bidUsers[idx]} />
                           ) : (
                             <CircleUser className="h-10 w-10" />
                           )}
                           <div className="stroke-pine-900 text-pine-900">
                             <div className="text-xl font-bold">
-                              {bidUsers[idx].name}
+                              {bidUsers[idx]?.name}
                             </div>
                             <div className="flex items-center gap-1 text-base">
                               <Star className="inline" />
                               <span>
-                                {Math.round(bidUsers[idx].karma || 0)} karma
+                                {Math.round(bidUsers[idx]?.karma || 0)} karma
                               </span>
                             </div>
                           </div>
