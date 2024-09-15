@@ -1,4 +1,5 @@
 import re
+import uuid
 from typing import List, Tuple
 import warnings
 import requests
@@ -33,6 +34,7 @@ class Email:
         self.name = name
         self.links = []
         self.can_self_pickup = can_self_pickup
+
     def __str__(self):
         return f"Subject: {self.subject}\nFrom: {self.from_}\nMailing List: {self.mailing_list}\nName: {self.name}\nDate: {self.date}\nCan self-pickup: {self.can_self_pickup}\nBody: {self.body}\nLinks: {self.links}"
 
@@ -47,6 +49,50 @@ class Email:
             "mailing_list": self.mailing_list,  # Include mailing list in JSON
             "photo_urls": self.links
         }
+
+
+def download_img(login_url, url):
+    # Initialize a session to maintain cookies and session state
+    session = requests.Session()
+
+    # Data for the POST request (login form)
+    login_data = {
+        'username': username,
+        'password': password,
+        'submit': 'Let me in...'  # This matches what was in the form data in the image
+    }
+
+    # Perform the login
+    response = session.post(login_url, data=login_data)
+
+    response = session.get(url, stream=True)
+    # Check if the response is successful
+    if response.status_code == 200:
+        # Get the content type of the response
+        content_type = response.headers.get('content-type')
+
+        # Check if the content is an image
+        if 'image' in content_type:
+            # Generate a unique filename
+            file_extension = content_type.split('/')[-1]
+            filename = f"image_{uuid.uuid4()}.{file_extension}"
+
+            # Ensure the 'imgs' directory exists
+            os.makedirs('imgs', exist_ok=True)
+
+            # Save the image
+            with open(os.path.join('imgs', filename), 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+            print(f"Image downloaded and saved as {filename}")
+            return os.path.join('imgs', filename)
+        else:
+            print("The URL does not point to an image.")
+            return None
+    else:
+        print(f"Failed to download image. Status code: {response.status_code}")
+        return None
 
 
 def get_logs(login_url, url) -> str:
@@ -268,13 +314,14 @@ def parse_logs(log_text: str) -> List[Email]:
                 email_date = line[5:].strip()
 
             elif line.startswith('Subject:'):
-                email_subject, mailing_list = get_subj_and_mailing_list_from_line(line)
+                email_subject, mailing_list = get_subj_and_mailing_list_from_line(
+                    line)
                 if email_subject.startswith(('Reuse Digest', 'Fwd:', 'Re:')):
                     is_useless = True
                     break
                 if check_existence(email_date, email_subject):
                     exists = True
-                if  check_existence(email_date, email_subject) is None:
+                if check_existence(email_date, email_subject) is None:
                     print("Couldn't parse date, moving on.")
                     is_useless = True
                     break
@@ -298,12 +345,13 @@ def parse_logs(log_text: str) -> List[Email]:
         # Post-processing
         if is_useless or exists:
             continue
-        
+
         email_body = '\n'.join(body_lines).strip()
         if not is_opportunity(email_subject, email_body):
             continue
 
-        email_location, can_self_pickup = get_location_and_can_self_pickup(email_body)
+        email_location, can_self_pickup = get_location_and_can_self_pickup(
+            email_body)
         email = Email(email_subject, email_from,
                       email_date, email_body, email_location, mailing_list, can_self_pickup, sender_name)
 
@@ -339,51 +387,54 @@ def parse_date(date_str, default=None):
         "%a, %d %b %Y %H:%M:%S %z",  # Format: 'Sun, 1 Sep 2024 08:22:39 -0400'
         "%A, %B %d, %Y at %I:%M%p"   # Format: 'Thursday, September 12, 2024 at 3:52PM'
     ]
-    
+
     # Try each format until one works
     for date_format in possible_formats:
         try:
-            return datetime.strptime(date_str.replace('?', ''), date_format)  # Removing any '?' symbols
+            # Removing any '?' symbols
+            return datetime.strptime(date_str.replace('?', ''), date_format)
         except ValueError:
             continue  # Try the next format if this one fails
-    
+
     # If no formats match, give a warning and return the default date
-    warnings.warn(f"Warning: Failed to parse date string '{date_str}'. Using default date.")
-    
+    warnings.warn(
+        f"Warning: Failed to parse date string '{date_str}'. Using default date.")
+
     # Return the provided default date or the current datetime if no default is given
     return default
+
 
 def check_existence(date_str, subject):
     # Parse the date string into a datetime object with a fallback to the current date
     date = parse_date(date_str)
     if date is None:
         return None
-    
+
     # Calculate the start and end of the one-week window before and after the date
     start_date = date - timedelta(weeks=1)
     end_date = date + timedelta(weeks=1)
-    
+
     # Convert the start and end dates back to strings for the database query (if needed)
     start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
     end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
-    
+
     # Check if there is an entry within the one-week window with the same name
-    result = supabase.table("items").select("*").gte("created_at", start_date_str).lte("created_at", end_date_str).execute()
+    result = supabase.table("items").select(
+        "*").gte("created_at", start_date_str).lte("created_at", end_date_str).execute()
 
     # If any rows are returned, check if the name is the same
     for row in result.data:
         if row['name'] == subject:
-            print(f"Email with subject '{subject}' from {row['created_at']} already exists within one week.")
+            print(
+                f"Email with subject '{subject}' from {row['created_at']} already exists within one week.")
             return True
-    
+
     return False
 
 
-
-
-
 def write_to_db(email: Email):
-    email_location, can_self_pickup = get_location_and_can_self_pickup(email.subject + "\n" + email.body)
+    email_location, can_self_pickup = get_location_and_can_self_pickup(
+        email.subject + "\n" + email.body)
     email.location = email_location
     email.can_self_pickup = can_self_pickup
     email_json = email.to_json()
