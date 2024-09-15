@@ -69,6 +69,40 @@ export default function Browse() {
       <h1 className="text-[24px]">browse listings</h1>
       <hr className="border-pine-900 border-opacity-30" />
       <>
+        {loading ? (
+          <div className="grid grid-cols-2 grid-rows-2">
+            {Array(4).map((_) => (
+              <>
+                <Skeleton className="h-96 max-w-[200px]" />
+              </>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 mt-6">
+            {items.map((item, idx) => (
+              <div className="my-2 max-w-[250px] hover:scale-105 overflow-clip duration-200 cursor-pointer" onClick={() => navigate("/item/" + item.id)}>
+                <div className="flex justify-start">
+                  <img src={item.photo_urls ? item.photo_urls[0] : "https://localhost:5173/vite.svg"} className="h-[200px] w-[200px] rounded-lg" />
+                </div>
+                <h2 className="text-base">{item.name}</h2>
+                <p className="text-sm">{item.quality}</p>
+                <p className="flex items-center gap-2 text-sm">
+                  <MapPin size={20} />
+                  <span>{item.location}</span>
+                </p>
+                {sellers[idx] && (
+                  <p className="flex items-center gap-2 text-sm">
+                    <Star size={20} />
+                    <span>
+                      seller has <strong>{sellers[idx].karma || 0}</strong>{' '}
+                      karma
+                    </span>
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         {pageCount > 1 && (
           <Pagination>
             <PaginationContent>
@@ -109,40 +143,6 @@ export default function Browse() {
               )}
             </PaginationContent>
           </Pagination>
-        )}
-        {loading ? (
-          <div className="grid grid-cols-2 grid-rows-2">
-            {Array(4).map((_) => (
-              <>
-                <Skeleton className="h-96 max-w-[200px]" />
-              </>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2 mt-6">
-            {items.map((item, idx) => (
-              <div className="my-4 max-w-[250px] hover:scale-105 duration-200 cursor-pointer" onClick={() => navigate("/item/" + item.id)}>
-                <div className="flex justify-start">
-                  <img src={item.photo_urls ? item.photo_urls[0] : "https://localhost:5173/vite.svg"} className="h-[200px] w-[200px] rounded-lg" />
-                </div>
-                <h2 className="text-base">{item.name}</h2>
-                <p className="text-sm">{item.quality}</p>
-                <p className="flex items-center gap-2 text-sm">
-                  <MapPin size={20} />
-                  <span>{item.location}</span>
-                </p>
-                {sellers[idx] && (
-                  <p className="flex items-center gap-2 text-sm">
-                    <Star size={20} />
-                    <span>
-                      seller has <strong>{sellers[idx].karma || 0}</strong>{' '}
-                      karma
-                    </span>
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
         )}
       </>
     </>
