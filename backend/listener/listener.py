@@ -1,5 +1,10 @@
 from supabase import create_client, Client
+import os
+import sys
 from utils import *
+
+# Now I can import
+from geolocation import *
 
 urls = [
     (
