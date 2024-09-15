@@ -12,7 +12,7 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   return (
-    <div className="flex w-full justify-center p-4">
+    <div className="flex w-full justify-center py-4">
       <div className="flex w-full flex-row items-center justify-between gap-2">
         <div>
           <Menu className="stroke-pine-900" />
@@ -22,7 +22,7 @@ export default function Navbar() {
             <Search className="ml-1 stroke-pine-900" />
             <input
               className={
-                'flex w-full rounded-md border border-transparent bg-transparent px-0 py-0 text-sm ring-offset-transparent placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+                'flex w-full rounded-md border border-transparent bg-transparent px-0 py-0 text-base ring-offset-transparent placeholder:text-pine-900 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-2'
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

@@ -78,11 +78,21 @@ export default function Browse() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 mt-6">
+          <div className="mt-6 grid grid-cols-2 gap-3">
             {items.map((item, idx) => (
-              <div className="my-2 max-w-[250px] hover:scale-105 overflow-clip duration-200 cursor-pointer" onClick={() => navigate("/item/" + item.id)}>
+              <div
+                className="my-2 max-w-[250px] cursor-pointer overflow-clip duration-200 hover:scale-105"
+                onClick={() => navigate('/item/' + item.id)}
+              >
                 <div className="flex justify-start">
-                  <img src={item.photo_urls ? item.photo_urls[0] : "https://localhost:5173/vite.svg"} className="h-[200px] w-[200px] rounded-lg" />
+                  <img
+                    src={
+                      item.photo_urls
+                        ? item.photo_urls[0]
+                        : 'https://localhost:5173/vite.svg'
+                    }
+                    className="h-[200px] w-[200px] rounded-lg"
+                  />
                 </div>
                 <h2 className="text-base">{item.name}</h2>
                 <p className="text-sm">{item.quality}</p>

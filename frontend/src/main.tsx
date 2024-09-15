@@ -12,7 +12,7 @@ import SingleItem from './routes/SingleItem';
 
 const Wrapper = ({ children }: any) => {
   return (
-    <div className="mx-auto w-[min(56rem,90%)] mb-10">
+    <div className="mx-auto mb-10 w-[min(56rem,90%)]">
       <Navbar />
       {children}
     </div>
