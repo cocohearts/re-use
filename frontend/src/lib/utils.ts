@@ -1,6 +1,8 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+const supabaseProjectId = import.meta.env.VITE_PROJECT_REF;
+
 // shadcn stuff
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -31,12 +33,25 @@ const convertToJSON = async (res: any) => {
   throw errormessage;
 };
 
+export const getToken = () => {
+  const storageKey = `sb-${supabaseProjectId}-auth-token`;
+  const sessionDataString = localStorage.getItem(storageKey);
+  const sessionData = JSON.parse(sessionDataString || 'null');
+  const token = sessionData?.access_token;
+
+  return token;
+};
+
 // Helper code to make a get request. Default parameter of empty JSON Object for params.
 // Returns a Promise to a JSON Object.
 export const get = async (endpoint: string, params: object = {}) => {
   const fullPath = endpoint + '?' + formatParams(params);
   try {
-    const response = await fetch(fullPath);
+    const response = await fetch(fullPath, {
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+      },
+    });
     const json = await convertToJSON(response);
     return json;
   } catch (error) {
@@ -50,7 +65,10 @@ export const post = async (endpoint: string, params: object = {}) => {
   try {
     const response = await fetch(endpoint, {
       method: 'post',
-      headers: { 'Content-type': 'application/json' },
+      headers: {
+        'Content-type': 'application/json',
+        Authorization: `Bearer ${getToken()}`,
+      },
       body: JSON.stringify(params),
     });
     const json = await convertToJSON(response);
