@@ -9,13 +9,51 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      bids: {
+        Row: {
+          bidder_id: string
+          created_at: string
+          id: number
+          item_id: string
+        }
+        Insert: {
+          bidder_id: string
+          created_at?: string
+          id?: number
+          item_id: string
+        }
+        Update: {
+          bidder_id?: string
+          created_at?: string
+          id?: number
+          item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bids_bidder_id_fkey"
+            columns: ["bidder_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bids_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       items: {
         Row: {
+          can_self_pickup: boolean
           created_at: string
           description: string
           email: string | null
           id: string
           location: string | null
+          mailing_list: string | null
           name: string
           photo_urls: string[] | null
           quality: string | null
@@ -23,11 +61,13 @@ export type Database = {
           tags: string[] | null
         }
         Insert: {
+          can_self_pickup?: boolean
           created_at?: string
           description?: string
           email?: string | null
           id?: string
           location?: string | null
+          mailing_list?: string | null
           name: string
           photo_urls?: string[] | null
           quality?: string | null
@@ -35,11 +75,13 @@ export type Database = {
           tags?: string[] | null
         }
         Update: {
+          can_self_pickup?: boolean
           created_at?: string
           description?: string
           email?: string | null
           id?: string
           location?: string | null
+          mailing_list?: string | null
           name?: string
           photo_urls?: string[] | null
           quality?: string | null

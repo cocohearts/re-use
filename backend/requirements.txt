@@ -5,4 +5,4 @@ imapclient
 uvicorn
 pydantic
 gunicorn
-jwt
+PyJWT
