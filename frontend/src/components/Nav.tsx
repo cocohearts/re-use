@@ -51,7 +51,7 @@ export default function Navbar() {
 
         <div className="w-full max-w-lg">
           <div className="flex h-full items-center gap-2 rounded-full bg-pine-50 p-2 text-pine-900">
-            <Search className="ml-1 stroke-pine-900" />
+            <Search className="ml-1 stroke-pine-900 cursor-pointer" onClick={() => navigate('/?q=' + searchQuery)} />
             <input
               className={
                 'flex w-full rounded-md border border-transparent bg-transparent px-0 py-0 text-base ring-offset-transparent placeholder:text-pine-900 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-2'
@@ -69,7 +69,9 @@ export default function Navbar() {
         </div>
         <div className="flex items-center">
           {user ? (
-            <ProfilePicture user={user} />
+            <div className="cursor-pointer" onClick={() => navigate('/profile')}>
+              <ProfilePicture user={user} />
+            </div>
           ) : (
             <Dialog>
               <DialogTrigger>

@@ -3,7 +3,7 @@ import jwt
 import os
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -14,6 +14,15 @@ load_dotenv()
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 app = FastAPI()
+
+
+def get_current_user(request: Request) -> dict:
+    user = request.state.user
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    return user
+
 
 def verify_access_token(request):
     authorization = request.headers.get("Authorization")
@@ -32,9 +41,9 @@ def verify_access_token(request):
             audience="authenticated",
         )["user_metadata"]
         return payload
-    
+
     return None
-    
+
 
 # https://medium.com/@chandanp20k/leveraging-custom-middleware-in-python-fastapi-for-enhanced-web-development-09ba72b5ddc6
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -44,11 +53,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
             user = verify_access_token(request)
 
             # If token validation succeeds, continue to the next middleware or route handler
+            print("verified", user)
             request.state.user = user
 
             response = await call_next(request)
             return response
-        
+
         except Exception as e:
             # If token validation fails due to other exceptions, return a generic error response
             return JSONResponse(content={"detail": f"Error: {str(e)}"}, status_code=500)

@@ -1,6 +1,8 @@
+from datetime import datetime
 import os
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, Form, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from backend.auth_middleware import get_current_user
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -43,7 +45,6 @@ api.add_middleware(
 
 api.add_middleware(AuthMiddleware)
 
-print("DIST_PATH:", DIST_PATH)
 if DIST_PATH:
     app.mount('/', StaticFiles(directory=DIST_PATH, html=True), name="static")
 
@@ -74,11 +75,8 @@ class ItemInput(BaseModel):
     can_self_pickup: bool
 
 
-
 class BidInput(BaseModel):
-    bidder_id: str
-    created_at: str
-    item_id: str
+    pass
 
 
 # Create user: given email, set karma to 0
@@ -146,28 +144,28 @@ async def create_item(data: ItemInput):
 
 
 @api.post("/bid-for-item/{item_id}")
-async def bid_for_item(item_id: str, data: BidInput, request: Request):
+async def bid_for_item(item_id: str, bidder_id: str = Depends(get_current_user)):
+    if bidder_id is None:
+        raise HTTPException(
+            status_code=403, detail="You can't bid for items without registering")
+
     try:
-        # Get the bidder_id from the authenticated user
-        bidder_id = request.state.user_id  # Assuming user_id is set in the request state after authentication
+        existing_bid = supabase.table("bids").select("id").eq(
+            "bidder_id", bidder_id).eq("item_id", item_id).execute()
 
-        assert data.item_id == item_id
-        
-        # Check if the bidder has already placed a bid on the same item
-        existing_bid = supabase.table("bids").select("id").eq("bidder_id", bidder_id).eq("item_id", item_id).execute()
         if existing_bid.data:
-            raise HTTPException(status_code=400, detail="Bidder has already placed a bid on this item.")
-
+            raise HTTPException(
+                status_code=400, detail="Bidder has already placed a bid on this item.")
         # Insert bid data into the bids table
-        response = (
-            supabase.table("bids")
+        supabase.table("bids")\
             .insert({
                 "bidder_id": bidder_id,
-                "created_at": data.created_at,
-                "item_id": data.item_id,
-            })
+                "created_at": datetime.now().isoformat(),
+                "item_id": item_id,
+            })\
             .execute()
-        )
+        response = supabase.table("bids").select(
+            "*").eq("item_id", item_id).execute()
 
         return {"message": "Bid created successfully", "data": response}
 
@@ -175,7 +173,25 @@ async def bid_for_item(item_id: str, data: BidInput, request: Request):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/get-bids-for-item/{item_id}")
+@ api.post("/cancel-bid/{item_id}")
+async def cancel_bid(item_id: str, request: Request):
+    bidder_id = request.state.user_id
+    if bidder_id is None:
+        raise HTTPException(
+            status_code=403, detail="You can't bid for items without registering")
+    try:
+        # Insert bid data into the bids table
+        supabase.table("bids").delete().eq(
+            "item_id", item_id).eq("bidder_id", bidder_id)
+        response = supabase.table("bids").select(
+            "*").eq("item_id", item_id).execute()
+        return {"message": "Bid deleted successfully", "data": response}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@ app.get("/get-bids-for-item/{item_id}")
 async def get_bids_for_item(item_id: str):
     try:
         response = supabase.table("bids").select(
@@ -185,7 +201,7 @@ async def get_bids_for_item(item_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/accept-bid/{bid_id}")
+@ app.post("/accept-bid/{bid_id}")
 async def accept_bid(bid_id: str):
     try:
         # Check the current state of the bid before updating
@@ -217,7 +233,7 @@ async def accept_bid(bid_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/get-accepted-bids-as-seller/{user_id}")
+@ app.get("/get-accepted-bids-as-seller/{user_id}")
 async def get_accepted_bids_as_seller(user_id: str):
     try:
         response = supabase.table("bids").select(
@@ -227,7 +243,7 @@ async def get_accepted_bids_as_seller(user_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/get-accepted-bids-as-buyer/{user_id}")
+@ app.get("/get-accepted-bids-as-buyer/{user_id}")
 async def get_accepted_bids_as_buyer(user_id: str):
     try:
         response = supabase.table("bids").select(
@@ -237,7 +253,7 @@ async def get_accepted_bids_as_buyer(user_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@api.put("/edit-item/{item_id}")
+@ api.put("/edit-item/{item_id}")
 async def edit_item(item_id: str, data: ItemInput):
     try:
         # Update item data in the items table
@@ -262,7 +278,7 @@ async def edit_item(item_id: str, data: ItemInput):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@api.post("/get-user-karma/{user_id}")
+@ api.post("/get-user-karma/{user_id}")
 async def get_user_karma(user_id: str):
     try:
         response = supabase.table("users").select(
@@ -272,7 +288,7 @@ async def get_user_karma(user_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@api.get("/get-user/{user_id}")
+@ api.get("/get-user/{user_id}")
 async def get_user(user_id: str, request: Request):
     """
     Retrieve user data by user ID.
@@ -300,7 +316,7 @@ async def get_user(user_id: str, request: Request):
 # Get all items ids
 
 
-@api.get("/get-all-items-ids")
+@ api.get("/get-all-items-ids")
 async def get_all_items_ids():
     """
     Get all item IDs from the database.
@@ -317,7 +333,7 @@ async def get_all_items_ids():
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@api.get("/get-all-items")
+@ api.get("/get-all-items")
 async def get_all_items():
     """
     Get all items from the database.
@@ -336,7 +352,7 @@ async def get_all_items():
 # Get data given item id
 
 
-@api.get("/get-item/{item_id}")
+@ api.get("/get-item/{item_id}")
 async def get_item(item_id: str):
     """
     Retrieve item data by item ID.
@@ -375,7 +391,7 @@ async def get_item(item_id: str):
 # Returns paginated items with a similar name
 
 
-@api.get("/search-items-by-name/")
+@ api.get("/search-items-by-name/")
 async def search_items_by_name(name: str = "", page: int = 1, page_size: int = 10):
     """
     Search for items by name with pagination, sorted by recency.
@@ -410,7 +426,7 @@ async def search_items_by_name(name: str = "", page: int = 1, page_size: int = 1
 
 
 # Get number of pages for a given search query
-@api.get("/get-number-of-pages/")
+@ api.get("/get-number-of-pages/")
 async def get_number_of_pages(name: str = "", page_size: int = 10):
     """
     Calculate the total number of pages required for a given search query, sorted by recency.
@@ -442,5 +458,7 @@ async def get_number_of_pages(name: str = "", page_size: int = 10):
         raise HTTPException(status_code=400, detail=str(e))
 
 if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(api, host="0.0.0.0", port=8000)
     import uvicorn
     uvicorn.run(api, host="0.0.0.0", port=8000)
