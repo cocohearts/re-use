@@ -41,7 +41,7 @@ export default function AddItemPage() {
 
   const navigate = useNavigate();
 
-  const { user, token: authToken } = useAuthContext();
+  const { user } = useAuthContext();
 
   useEffect(() => {
     setReadyToList(
