@@ -24,6 +24,7 @@ export default function SingleItem() {
   const [notFound, setNotFound] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [bids, setBids] = useState<Tables<'bids'>[]>([]);
+  const [bidUsers, setBidUsers] = useState<Tables<'users'>[]>([]);
 
   const [photoIndex, setPhotoIndex] = useState<number>(0);
   const location = useLocation();
@@ -73,6 +74,12 @@ export default function SingleItem() {
         alert(e);
       });
   }, [item]);
+
+  useEffect(() => {
+    get('/api/get-multiple-users', { userids: bids.map((x) => x.bidder_id) })
+      .then((resp) => setBidUsers(resp.data))
+      .catch(alert);
+  }, [bids]);
 
   const toggleBid = () => {
     if (!user || !item) return;
@@ -133,7 +140,9 @@ export default function SingleItem() {
               toggleBid();
             }}
           >
-            make an offer
+            {bids.findIndex((x) => user && x.bidder_id === user.id) === -1
+              ? 'make an offer'
+              : 'cancel offer'}
           </button>
         )}
         <div className="flex flex-row items-center gap-2 py-[13px] text-lg text-pine-900 text-opacity-50">
@@ -148,31 +157,50 @@ export default function SingleItem() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Active Offers</DialogTitle>
-                <DialogDescription>
-                  All active offers
-                </DialogDescription>
+                <DialogDescription>All active offers</DialogDescription>
               </DialogHeader>
               <div className="grid columns-3">
-                {bids.map(
-                  bid => (
-                    <>
-                      <div className="col-span-2">
-                        {bid.bidder_id}
-                      </div>
-                      <div className="col-span-1">
-                        {user && user.id === item.seller_id ? (
-                          <Button className={"bg-pine-900"}>
-                            {bid.accepted ? "Cancel" : "Accept Bid"}
-                          </Button>
-                        ) : bid.accepted ? (
-                          <div className="text-pine-900">
-                            Bid Accepted
+                {bids.map((bid, idx) => (
+                  <>
+                    <div className="col-span-2">
+                      <div className="flex flex-row items-center justify-between gap-3">
+                        <div className="flex flex-row items-center gap-3">
+                          {bidUsers[idx].pfp_url ? (
+                            <img
+                              src={bidUsers[idx].pfp_url}
+                              className="h-10 w-10 rounded-full"
+                            />
+                          ) : (
+                            <CircleUser className="h-10 w-10" />
+                          )}
+                          <div className="stroke-pine-900 text-pine-900">
+                            <div className="text-xl font-bold">
+                              {bidUsers[idx].name}
+                            </div>
+                            <div className="flex items-center gap-1 text-base">
+                              <Star className="inline" />
+                              <span>
+                                {Math.round(bidUsers[idx].karma || 0)} karma
+                              </span>
+                            </div>
                           </div>
-                        ) : null}
+                        </div>
+                        <div className="flex flex-row items-center">
+                          {new Date(bid.created_at).toLocaleDateString()}
+                        </div>
                       </div>
-                    </>
-                  )
-                )}
+                    </div>
+                    <div className="col-span-1">
+                      {user && user.id === item.seller_id ? (
+                        <Button className={'bg-pine-900'}>
+                          {bid.accepted ? 'Cancel' : 'Accept Bid'}
+                        </Button>
+                      ) : bid.accepted ? (
+                        <div className="text-pine-900">Bid Accepted</div>
+                      ) : null}
+                    </div>
+                  </>
+                ))}
               </div>
             </DialogContent>
           </Dialog>
@@ -206,7 +234,7 @@ export default function SingleItem() {
               </div>
             </div>
             <div className="flex flex-row items-center">
-              <Button variant={"filled"} className="rounded-lg bg-pine-900">
+              <Button variant={'filled'} className="rounded-lg bg-pine-900">
                 contact
               </Button>
             </div>

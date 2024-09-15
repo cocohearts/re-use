@@ -53,7 +53,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
             user = verify_access_token(request)
 
             # If token validation succeeds, continue to the next middleware or route handler
-            print("verified", user)
             request.state.user = user
 
             response = await call_next(request)
