@@ -5,4 +5,4 @@ cd "$DIR" || exit 1
 
 set -x
 
-docker build $(cat "$DIR/.env" | sed 's/^/--build-arg /g') -t reuse:latest .
+docker build $(cat "$DIR/.env" | sed 's/^/--build-arg /g') -t junikimm717/reuse .
