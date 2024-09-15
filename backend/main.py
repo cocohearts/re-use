@@ -145,14 +145,23 @@ async def create_item(data: ItemInput):
 
 
 @api.post("/api/bid-for-item/{item_id}")
-async def bid_for_item(item_id: str, data: BidInput):
+async def bid_for_item(item_id: str, data: BidInput, request: Request):
     try:
+        # Get the bidder_id from the authenticated user
+        bidder_id = request.state.user_id  # Assuming user_id is set in the request state after authentication
+
         assert data.item_id == item_id
+        
+        # Check if the bidder has already placed a bid on the same item
+        existing_bid = supabase.table("bids").select("id").eq("bidder_id", bidder_id).eq("item_id", item_id).execute()
+        if existing_bid.data:
+            raise HTTPException(status_code=400, detail="Bidder has already placed a bid on this item.")
+
         # Insert bid data into the bids table
         response = (
             supabase.table("bids")
             .insert({
-                "bidder_id": data.bidder_id,
+                "bidder_id": bidder_id,
                 "created_at": data.created_at,
                 "item_id": data.item_id,
             })
