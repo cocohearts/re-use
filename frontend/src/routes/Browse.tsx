@@ -96,8 +96,8 @@ export default function Browse() {
                   <span>{item.location}</span>
                 </p>
                 {sellers[idx] && (
-                  <p className="flex items-center gap-2 text-sm">
-                    <Star className="shrink-0" size={16} />
+                  <p className="flex items-start gap-2 text-sm">
+                    <Star className="mt-0.5 shrink-0" size={16} />
                     <span>
                       seller has <strong>{sellers[idx].karma || 0}</strong>{' '}
                       karma
