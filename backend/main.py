@@ -231,6 +231,44 @@ async def accept_bid(bid_id: str):
         return {"message": "Bid updated successfully and email sent to the bidder", "data": response}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+@api.post("/review-user/{bid_id}")
+async def review_user(bid_id: str, review: int, reviewee_id: str):
+    try:
+        if review < 1 or review > 5:
+            raise HTTPException(status_code=400, detail="Review must be between 1 and 5.")
+
+        # Get the user associated with the bid
+        existing_bid = supabase.table("bids").select("bidder_id, item_id").eq("id", bid_id).execute()
+        if not existing_bid.data:
+            raise HTTPException(status_code=400, detail="Bid not found.")
+
+        bidder_id = existing_bid.data[0]['bidder_id']
+        item_id = existing_bid.data[0]['item_id']
+
+        # Get the seller_id from the items table using the item_id
+        existing_item = supabase.table("items").select("seller_id").eq("id", item_id).execute()
+        if not existing_item.data:
+            raise HTTPException(status_code=400, detail="Item not found.")
+
+        seller_id = existing_item.data[0]['seller_id']
+
+        # Validate the reviewee ID
+        if reviewee_id not in [bidder_id, seller_id]:
+            raise HTTPException(status_code=400, detail="Reviewee ID must be either the bidder or the seller.")
+
+        # Adjust karma based on the review
+        karma_adjustment = review - 3  # Assuming 3 is neutral
+        response = supabase.table("users").update({
+            "karma": supabase.raw("karma + {}".format(karma_adjustment))
+        }).eq("id", reviewee_id).execute()
+
+        return {"message": "User karma adjusted successfully", "data": response}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+
 
 
 @ api.get("/get-accepted-bids-as-seller/{user_id}")
