@@ -1,5 +1,5 @@
 import { useAuthContext } from '@/components/AuthProvider';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import {
@@ -71,10 +71,16 @@ export default function ProfilePage() {
       </div>
 
       <div className="mb-2 grid h-28 grid-cols-3 gap-2 text-xl">
-        <Button className="flex h-full flex-col gap-1">
+        <a
+          className={cn(
+            buttonVariants({ variant: 'default' }),
+            'flex h-full flex-col gap-1',
+          )}
+          href="/add-item"
+        >
           <Plus />
           <p>add item</p>
-        </Button>
+        </a>
         <Button className="flex h-full flex-col gap-1">
           <MailOpen />
           <p>view bids</p>

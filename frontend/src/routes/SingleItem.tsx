@@ -108,7 +108,7 @@ export default function SingleItem() {
         console.log('accept bid data:', resp.data);
         console.log('all bids before:', bids);
         if (resp.data.length === 0) return;
-        const updatedBid: Tables<'bids'> = resp.data[0];
+        const updatedBid: Tables<'bids'> = resp.data.data[0];
         setBids((bids) =>
           bids.map((b) => (b.id === updatedBid.id ? updatedBid : b)),
         );
@@ -197,7 +197,8 @@ export default function SingleItem() {
                             <div className="flex items-center gap-1 text-base">
                               <Star className="inline" />
                               <span>
-                                {Math.round(bidUsers[idx]?.karma || 0)} karma
+                                {Math.round(bidUsers[idx]?.karma || 0)}
+                                &nbsp;karma
                               </span>
                             </div>
                           </div>
@@ -266,11 +267,15 @@ export default function SingleItem() {
                                 <Button
                                   variant="ghost"
                                   onClick={() => {
-                                    post('/api/review-user/' + bid.id + `?review=${rating}&reviewee_id=${
-                                      user.id === bid.bidder_id
-                                        ? item.seller_id
-                                        : bid.bidder_id
-                                    }`).catch(alert);
+                                    post(
+                                      '/api/review-user/' +
+                                        bid.id +
+                                        `?review=${rating}&reviewee_id=${
+                                          user.id === bid.bidder_id
+                                            ? item.seller_id
+                                            : bid.bidder_id
+                                        }`,
+                                    ).catch(alert);
                                   }}
                                 >
                                   Confirm
