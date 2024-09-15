@@ -67,8 +67,8 @@ export default function Browse() {
       <>
         {loading ? (
           <div className="grid w-full grid-cols-2 grid-rows-2 gap-2">
-            {[...Array(6)].map((_) => (
-              <div className="flex flex-col gap-2">
+            {[...Array(6)].map((_, i) => (
+              <div className="flex flex-col gap-2" key={i}>
                 <Skeleton className="aspect-square w-full" />
                 <Skeleton className="h-4 w-3/4 rounded-full" />
                 <Skeleton className="h-4 w-1/2 rounded-full" />

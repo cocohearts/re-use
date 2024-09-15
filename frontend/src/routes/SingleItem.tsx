@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CircleUser, MailOpen, MapPin, Star } from 'lucide-react';
 import { get, post } from '@/lib/utils';
 import { useAuthContext } from '@/components/AuthProvider';
+import { Button, buttonVariants } from '@/components/ui/button';
 
 export default function SingleItem() {
   const { uuid } = useParams();
@@ -88,7 +89,7 @@ export default function SingleItem() {
         <>
           <img
             src={item.photo_urls[photoIndex]}
-            className="my-[14px] w-[200px] rounded-lg"
+            className="mx-auto my-[14px] h-60 rounded-lg"
           />
           <div className="my-[14px] flex flex-row gap-2 overflow-x-auto">
             {item.photo_urls.map((photo, index) => (
@@ -96,7 +97,7 @@ export default function SingleItem() {
                 onClick={() => setPhotoIndex(index)}
                 src={photo}
                 className={
-                  'h-10 w-10 cursor-pointer rounded-lg' +
+                  'h-10 w-10 cursor-pointer rounded-lg object-cover' +
                   ' ' +
                   (index === photoIndex
                     ? '-inset-2 border border-black'
@@ -160,22 +161,32 @@ export default function SingleItem() {
               </div>
             </div>
             <div className="flex flex-row items-center">
-              <button className="rounded-lg bg-pine-900 px-4 py-2 text-white">
+              <a
+                className={buttonVariants({ variant: 'filled' })}
+                href={`mailto:${seller.email}`}
+              >
                 contact
-              </button>
+              </a>
             </div>
           </div>
         </>
       )}
     </>
-  ) : loading || true ? (
+  ) : loading ? (
     <>
-      <Skeleton className="my-2 h-[100px] w-[200px] rounded-lg" />
-      <div className="mt-2 flex flex-row">
-        {Array(2).map((_) => (
+      <Skeleton className="my-2 h-60 w-full rounded-lg" />
+      <div className="mt-2 flex flex-row gap-2">
+        {[...Array(2)].map((_) => (
           <Skeleton className="my-2 h-10 w-10 rounded-lg" />
         ))}
       </div>
+      <Skeleton className="my-2 h-6 w-full rounded-lg" />
+      <Skeleton className="my-2 h-6 w-1/2 rounded-lg" />
+      <Skeleton className="my-2 h-6 w-3/4 rounded-lg" />
+      <hr />
+      <Skeleton className="my-2 h-6 w-1/4 rounded-lg" />
+      <Skeleton className="my-2 h-6 w-1/2 rounded-lg" />
+      <Skeleton className="my-2 h-6 w-3/4 rounded-lg" />
     </>
   ) : error ? (
     <div className="text-xl text-red-800">
