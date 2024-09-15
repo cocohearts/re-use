@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+import mailer
 
 from backend.auth_middleware import AuthMiddleware
 
@@ -144,7 +145,7 @@ async def create_item(data: ItemInput):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@api.post("/api/bid-for-item/{item_id}")
+@api.post("/bid-for-item/{item_id}")
 async def bid_for_item(item_id: str, data: BidInput, request: Request):
     try:
         # Get the bidder_id from the authenticated user
@@ -174,7 +175,7 @@ async def bid_for_item(item_id: str, data: BidInput, request: Request):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/api/get-bids-for-item/{item_id}")
+@app.get("/get-bids-for-item/{item_id}")
 async def get_bids_for_item(item_id: str):
     try:
         response = supabase.table("bids").select(
@@ -184,9 +185,17 @@ async def get_bids_for_item(item_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/api/accept-bid/{bid_id}")
+@app.post("/accept-bid/{bid_id}")
 async def accept_bid(bid_id: str):
     try:
+        # Check the current state of the bid before updating
+        existing_bid = supabase.table("bids").select("bidder_id", "accepted").eq("id", bid_id).execute()
+        
+        if not existing_bid.data or existing_bid.data[0]['accepted']:
+            raise HTTPException(status_code=400, detail="Bid has already been accepted or does not exist.")
+
+        bidder_id = existing_bid.data[0]['bidder_id']
+
         # Update bid data in the bids table
         response = (
             supabase.table("bids")
@@ -197,12 +206,18 @@ async def accept_bid(bid_id: str):
             .execute()
         )
 
-        return {"message": "Bid updated successfully", "data": response}
+        # Send an email to the user whose bid was accepted
+        user_email = supabase.table("users").select("email").eq("id", bidder_id).execute().data[0]['email']
+        subject = "Your Bid Has Been Accepted"
+        body = f"Congratulations! Your bid for bid ID {bid_id} has been accepted."
+        mailer.send_email(user_email, subject, body)
+
+        return {"message": "Bid updated successfully and email sent to the bidder", "data": response}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/api/get-accepted-bids-as-seller/{user_id}")
+@app.get("/get-accepted-bids-as-seller/{user_id}")
 async def get_accepted_bids_as_seller(user_id: str):
     try:
         response = supabase.table("bids").select(
@@ -212,7 +227,7 @@ async def get_accepted_bids_as_seller(user_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/api/get-accepted-bids-as-buyer/{user_id}")
+@app.get("/get-accepted-bids-as-buyer/{user_id}")
 async def get_accepted_bids_as_buyer(user_id: str):
     try:
         response = supabase.table("bids").select(
@@ -222,7 +237,7 @@ async def get_accepted_bids_as_buyer(user_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@api.put("/api/edit-item/{item_id}")
+@api.put("/edit-item/{item_id}")
 async def edit_item(item_id: str, data: ItemInput):
     try:
         # Update item data in the items table
