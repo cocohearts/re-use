@@ -7,6 +7,7 @@ import LoginModal from './LoginModal';
 export default function Navbar() {
   const { user } = useAuthContext();
   const [searchQuery, setSearchQuery] = useState<string>('');
+
   return (
     <div className="flex w-full justify-center p-4">
       <div className="flex w-full flex-row items-center justify-between gap-2">
@@ -27,7 +28,9 @@ export default function Navbar() {
           </div>
         </div>
         <div className="flex items-center">
-          {user ? null : ( // put a PFP here later.
+          {user ? (
+            <CircleUser className="cursor-pointer stroke-pine-900" /> // put a PFP here later.
+          ) : (
             <Dialog>
               <DialogTrigger>
                 <CircleUser className="cursor-pointer stroke-pine-900" />

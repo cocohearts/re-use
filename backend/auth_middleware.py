@@ -30,7 +30,7 @@ def verify_access_token(request):
             do_verify=True,
             algorithms=["HS256"],
             audience="authenticated",
-        )
+        )["user_metadata"]
         return payload
     
     return None

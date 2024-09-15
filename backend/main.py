@@ -1,10 +1,12 @@
 import os
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import Optional, List
+
+from backend.auth_middleware import AuthMiddleware
 
 # Load environment variables from .env file
 load_dotenv()
@@ -30,6 +32,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(AuthMiddleware)
 
 # Schema for creating a user
 class CreateUserInput(BaseModel):
@@ -163,8 +167,8 @@ async def get_user_karma(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/get-user/{user_id}")
-async def get_user(user_id: str):
+@app.get("/api/get-user/{user_id}")
+async def get_user(user_id: str, request: Request):
     """
     Retrieve user data by user ID.
 
