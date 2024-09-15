@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button, buttonVariants } from '@/components/ui/button';
 import ProfilePicture from '@/components/ProfilePicture';
+import { DialogClose } from '@radix-ui/react-dialog';
+import { Input } from '@/components/ui/input';
 
 export default function SingleItem() {
   const { uuid } = useParams();
@@ -99,6 +101,23 @@ export default function SingleItem() {
     }
   };
 
+  const acceptBid = (bid: Tables<'bids'>) => {
+    if (!user || !item) return;
+    post('/api/accept-bid/' + bid.id, {})
+      .then((resp) => {
+        console.log('accept bid data:', resp.data);
+        console.log('all bids before:', bids);
+        if (resp.data.length === 0) return;
+        const updatedBid: Tables<'bids'> = resp.data[0];
+        setBids((bids) =>
+          bids.map((b) => (b.id === updatedBid.id ? updatedBid : b)),
+        );
+      })
+      .catch(alert);
+  };
+
+  const [rating, setRating] = useState<number>(3);
+
   return item ? (
     <>
       {item.photo_urls && (
@@ -160,13 +179,12 @@ export default function SingleItem() {
                 <DialogTitle>Active Offers</DialogTitle>
                 <DialogDescription>All active offers</DialogDescription>
               </DialogHeader>
-              <div className="grid columns-3">
+              <div className="grid grid-cols-3">
                 {bids.map((bid, idx) => (
                   <>
                     <div className="col-span-2">
                       <div className="flex flex-row items-center justify-between gap-3">
                         <div className="flex flex-row items-center gap-3">
-
                           {bidUsers[idx] ? (
                             <ProfilePicture user={bidUsers[idx]} />
                           ) : (
@@ -189,13 +207,80 @@ export default function SingleItem() {
                         </div>
                       </div>
                     </div>
-                    <div className="col-span-1">
-                      {user && user.id === item.seller_id ? (
-                        <Button className={'bg-pine-900'}>
-                          {bid.accepted ? 'Cancel' : 'Accept Bid'}
-                        </Button>
+                    <div className="col-span-1 flex items-center justify-end">
+                      {user && user.id === item.seller_id && !bid.accepted ? (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button className={'bg-pine-900 text-white'}>
+                              Accept Bid
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Confirm Accepting Bid?</DialogTitle>
+                            </DialogHeader>
+                            <div className="flex gap-2">
+                              <DialogClose>
+                                <Button variant="filled">Cancel</Button>
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => acceptBid(bid)}
+                                >
+                                  Confirm
+                                </Button>
+                              </DialogClose>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      ) : user &&
+                        (user.id === bid.bidder_id ||
+                          user.id === item.seller_id) &&
+                        bid.accepted ? (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button className={'text-pine-900'} variant="ghost">
+                              Rate Bid
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>
+                                Rate your reuse experience!
+                              </DialogTitle>
+                            </DialogHeader>
+                            <label className="text-[16px]">rating</label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="5"
+                              className="mt-[8px]"
+                              placeholder="rating"
+                              value={rating}
+                              onChange={(e) => {
+                                setRating(parseInt(e.target.value) || 0);
+                              }}
+                            />
+                            <div className="flex gap-2">
+                              <DialogClose>
+                                <Button variant="filled">Cancel</Button>
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => {
+                                    post('/api/review-user/' + bid.id + `?review=${rating}&reviewee_id=${
+                                      user.id === bid.bidder_id
+                                        ? item.seller_id
+                                        : bid.bidder_id
+                                    }`).catch(alert);
+                                  }}
+                                >
+                                  Confirm
+                                </Button>
+                              </DialogClose>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       ) : bid.accepted ? (
-                        <div className="text-pine-900">Bid Accepted</div>
+                        <div className="text-gray-800">Bid Accepted</div>
                       ) : null}
                     </div>
                   </>

@@ -285,9 +285,9 @@ async def review_user(bid_id: str, review: int, reviewee_id: str):
                 status_code=400, detail="Reviewee ID must be either the bidder or the seller.")
 
         # Adjust karma based on the review
-        karma_adjustment = 5 * (review - 3)  # Assuming 3 is neutral
+        karma_adjustment = float(5*(review - 3))  # Assuming 3 is neutral
         response = supabase.table("users").update({
-            "karma": supabase.raw("karma + {}".format(karma_adjustment))
+            "karma": {"increment": karma_adjustment}
         }).eq("id", reviewee_id).execute()
 
         return {"message": "User karma adjusted successfully", "data": response}
