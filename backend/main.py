@@ -73,6 +73,7 @@ class ItemInput(BaseModel):
     other_urls: List[str] = []
     photo_urls: List[str]
     can_self_pickup: bool = False
+    location: str = ""
 
 
 class BidInput(BaseModel):
@@ -119,13 +120,20 @@ async def create_new_transaction(data: CreateTransactionInput):
 
 # Create item: upload photo to item_photos bucket, save item in DB
 @api.post("/create-item")
-async def create_item(data: ItemInput):
+async def create_item(data: ItemInput, request: Request):
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthenticated users cannot make listings.")
+    
+    seller_id = user["sub"]
+    seller_email = user["email"]
+
     try:
         # Insert item data into the items table
         response = (
             supabase.table("items")
             .insert({
-                "seller_id": data.seller_id,
+                "seller_id": seller_id,
                 "photo_urls": data.photo_urls,
                 "can_self_pickup": data.can_self_pickup,
                 "other_urls": data.other_urls,
@@ -133,7 +141,7 @@ async def create_item(data: ItemInput):
                 "name": data.name,
                 "description": data.description,
                 "location": data.location,
-                "email": data.email
+                "email": seller_email
             })
             .execute()
         )

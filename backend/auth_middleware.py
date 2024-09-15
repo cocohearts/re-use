@@ -18,9 +18,6 @@ app = FastAPI()
 
 def get_current_user(request: Request) -> dict:
     user = request.state.user
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     return user
 
 
