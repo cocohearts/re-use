@@ -1,5 +1,6 @@
 import re
 from typing import List, Tuple
+import uuid
 import warnings
 import requests
 from supabase import create_client, Client
@@ -7,6 +8,9 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 from datetime import timedelta, datetime
+from PIL import Image
+import io
+import tempfile
 
 load_dotenv()
 
@@ -21,6 +25,8 @@ supabase_url: str = os.environ.get("SUPABASE_URL")
 supabase_key: str = os.environ.get("SUPABASE_SERVICE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
+reuse_login_url: str = 'https://mailman.mit.edu/mailman/private/reuse/'
+free_foods_login_url: str = 'https://mailman.mit.edu/mailman/private/free-foods/'
 
 class Email:
     def __init__(self, subject, from_, date, body, location, mailing_list, can_self_pickup, name=""):
@@ -32,9 +38,10 @@ class Email:
         self.mailing_list = mailing_list  # New mandatory field for mailing list
         self.name = name
         self.links = []
+        self.mailman_links = []
         self.can_self_pickup = can_self_pickup
     def __str__(self):
-        return f"Subject: {self.subject}\nFrom: {self.from_}\nMailing List: {self.mailing_list}\nName: {self.name}\nDate: {self.date}\nCan self-pickup: {self.can_self_pickup}\nBody: {self.body}\nLinks: {self.links}"
+        return f"Subject: {self.subject}\nFrom: {self.from_}\nMailing List: {self.mailing_list}\nName: {self.name}\nDate: {self.date}\nCan self-pickup: {self.can_self_pickup}\nBody: {self.body}\nLinks: {self.links}\nMailman Links: {self.mailman_links}"
 
     def to_json(self):
         return {
@@ -45,7 +52,8 @@ class Email:
             "location": self.location,
             "can_self_pickup": self.can_self_pickup,
             "mailing_list": self.mailing_list,  # Include mailing list in JSON
-            "photo_urls": self.links
+            "photo_urls": self.mailman_links,
+            "other_urls": self.links
         }
 
 
@@ -82,6 +90,63 @@ def get_logs(login_url, url) -> str:
     # If all retries fail
     return None
 
+def get_image_from_mailman_link(login_url, url) -> str:
+    # Initialize a session to maintain cookies and session state
+    session = requests.Session()
+
+    # Data for the POST request (login form)
+    login_data = {
+        'username': username,
+        'password': password,
+        'submit': 'Let me in...'
+    }
+
+    # Perform the login
+    response = session.post(login_url, data=login_data)
+
+    # Retry mechanism
+    max_retries = 3
+    for attempt in range(max_retries):
+        response = session.get(url, stream=True)
+        if response.status_code == 200:
+            print('Download successful.')
+            image_bytes = response.content
+            # Compress and resize the image
+            with Image.open(io.BytesIO(image_bytes)) as img:
+                img.thumbnail((720, 720))  # Resize image to at most 720p
+                
+                # Generate a UUID for the image
+                image_uuid = uuid.uuid4()
+                file_path = f"{image_uuid}.jpg"  # Use UUID as the file name
+
+                # Create a temporary file
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
+                    img.save(temp_file, format='JPEG')
+                    temp_file_path = temp_file.name
+
+                try:
+                    # Upload image to Supabase storage
+                    bucket_name = "item_photos"
+                    with open(temp_file_path, 'rb') as f:
+                        file_options = {
+                            "content-type": "image/jpeg"
+                        }
+                        supabase.storage.from_(bucket_name).upload(file_path, f, file_options=file_options)
+                    print(f'Image uploaded to {bucket_name} with UUID {image_uuid}.')
+                    return file_path
+                finally:
+                    # Clean up the temporary file
+                    os.unlink(temp_file_path)
+        else:
+            print(f'Download failed. Attempt {attempt + 1} of {max_retries}.')
+            if attempt < max_retries - 1:
+                print('Retrying...')
+            else:
+                print('Max retries reached. Download failed.')
+                return None
+
+    # If all retries fail
+    return None
 
 def get_location_and_can_self_pickup(email_body: str) -> Tuple[str, bool]:
     try:
@@ -312,6 +377,23 @@ def parse_logs(log_text: str) -> List[Email]:
             link for link in url_pattern.findall(email_body)
             if check_img_url(link)
         ] + attachment_links
+
+        for i, link in enumerate(email.links):
+            if link.startswith(('http://mailman.mit.edu', 'https://mailman.mit.edu')) and ("/free-foods/" in link or "/reuse/" in link):
+                if "/free-foods/" in link:
+                    login_url = free_foods_login_url
+                elif "/reuse/" in link:
+                    login_url = reuse_login_url
+                try:
+                    public_url = supabase.storage.from_('item_photos').get_public_url(get_image_from_mailman_link(login_url, link))
+                    email.mailman_links.append(public_url)
+                    email.links.pop(i)
+                except Exception as e:
+                    warnings.warn(f"Failed to upload image for link '{link}' to Supabase: {e}")
+
+                        
+                
+                
 
         # # Remove text after and including the separator if present in the email body
         # separator = "________________________________"
