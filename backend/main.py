@@ -72,8 +72,9 @@ class ItemInput(BaseModel):
     description: str
     other_urls: List[str] = []
     photo_urls: List[str]
-    can_self_pickup: bool = False
     location: str = ""
+    can_self_pickup: bool = False
+    price: Optional[float] = 0.0
 
 
 class BidInput(BaseModel):
@@ -141,7 +142,8 @@ async def create_item(data: ItemInput, request: Request):
                 "name": data.name,
                 "description": data.description,
                 "location": data.location,
-                "email": seller_email
+                "email": seller_email,
+                "price": data.price,
             })
             .execute()
         )

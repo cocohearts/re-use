@@ -9,12 +9,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, X } from 'lucide-react';
+import { Loader2, Plus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import supabase from '@/lib/supabase';
-import { cn } from '@/lib/utils';
+import { cn, post } from '@/lib/utils';
 import { useAuthContext } from '@/components/AuthProvider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useNavigate } from 'react-router-dom';
 
 export default function AddItemPage() {
   const photoUploadRef: any = useRef(null);
@@ -33,7 +35,11 @@ export default function AddItemPage() {
   const [itemLocation, setItemLocation] = useState<string>('');
   const [itemDescription, setItemDescription] = useState<string>('');
   const [itemTags, setItemTags] = useState<string>('');
+  const [itemSelfPickup, setItemSelfPickup] = useState<boolean>(false);
   const [readyToList, setReadyToList] = useState<boolean>(false);
+  const [isSubmittingItem, setIsSubmittingItem] = useState<boolean>(false);
+
+  const navigate = useNavigate();
 
   const { user, token: authToken } = useAuthContext();
 
@@ -100,8 +106,6 @@ export default function AddItemPage() {
             .from('item_photos')
             .getPublicUrl(data.path).data;
 
-          console.log(publicUrl);
-
           setPhotos((photos) =>
             photos.map((photo) => {
               if (photo.id !== photoId) return photo;
@@ -132,19 +136,22 @@ export default function AddItemPage() {
       photo_urls: photos.map((photo) => photo.publicUrl),
       tags: itemTags.split(',').map((tag) => tag.trim()),
       location: itemLocation,
+      can_self_pickup: itemSelfPickup,
     };
     console.log('posting to /api/create-item...');
     console.log('body:', postBody);
-    const res = await fetch('/api/create-item', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authToken}`,
-      },
-      body: JSON.stringify(postBody),
-    });
-    console.log('done.');
-    console.log(await res.json());
+    setIsSubmittingItem(true);
+
+    try {
+      const res = await post('/api/create-item', postBody);
+      console.log('done.');
+      console.log(res);
+
+      const itemId = res.data.data[0].id;
+      navigate(`/item/${itemId}`);
+    } catch {
+      setIsSubmittingItem(false);
+    }
   };
 
   return (
@@ -280,31 +287,35 @@ export default function AddItemPage() {
           />
         </div>
         {/* Self-pickup */}
-        {/* <div>
-          <Label htmlFor="self-pickup-input">self-pickup *</Label>
-          <p className="text-sm opacity-80">
-            can people pick up items without notifying you?
-          </p>
-          <RadioGroup className="mt-2" id="self-pickup-input">
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="yes" id="option-yes" />
-              <Label htmlFor="option-yes">yes</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="no" id="option-no" />
-              <Label htmlFor="option-no">no, i will choose the bidder</Label>
-            </div>
-          </RadioGroup>
-        </div> */}
+        <div>
+          <Label>can self-pickup? (optional)</Label>
+          <div className="mt-1 flex items-start gap-2">
+            <Checkbox
+              className="mt-0.5"
+              id="self-pickup-input"
+              onCheckedChange={(value: boolean) => setItemSelfPickup(value)}
+            />
+            <Label className="text-sm opacity-80" htmlFor="self-pickup-input">
+              can users pick up this item without placing a bid? i.e. is this
+              item in a public location (default: no)
+            </Label>
+          </div>
+        </div>
       </div>
 
       {/* Submit button */}
       <Button
-        className="w-full"
+        className="flex w-full gap-2"
         variant="filled"
         onClick={submitListing}
-        disabled={!readyToList}
+        disabled={!readyToList || isSubmittingItem}
       >
+        <Loader2
+          className={cn(
+            isSubmittingItem ? 'block' : 'hidden',
+            'h-4 animate-spin',
+          )}
+        />
         list item
       </Button>
     </div>
