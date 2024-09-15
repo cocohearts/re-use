@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-import mailer
+from . import mailer
 
 from backend.auth_middleware import AuthMiddleware
 
