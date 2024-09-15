@@ -31,19 +31,8 @@ api = FastAPI(title="existing api")
 app.mount('/api', api)
 
 origins = [
-    "http://localhost:5173",
-    "http://localhost:8000",
+    "*"
 ]
-
-api.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-api.add_middleware(AuthMiddleware)
 
 if DIST_PATH:
     app.mount('/', StaticFiles(directory=DIST_PATH, html=True), name="static")
