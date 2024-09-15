@@ -60,7 +60,7 @@ export default function LoginModal() {
           className={
             'w-full text-white text-[18px] text-center mt-[24px] py-[13px] rounded-lg' +
             ' ' +
-            (validKerb(kerb) ? 'bg-green-700' : 'bg-gray-300')
+            (validKerb(kerb) ? 'bg-pine-800' : 'bg-gray-300')
           }
           onClick={() => {
             sendEmail(kerb);
@@ -74,7 +74,7 @@ export default function LoginModal() {
           </div>
         )}
         {sent && (
-          <div className="text-left text-pine-800 mt-[8px] text-[12px]">
+          <div className="text-left text-pine-700 mt-[8px] text-[12px]">
             Email Sent!
           </div>
         )}
