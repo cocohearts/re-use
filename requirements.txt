@@ -5,3 +5,4 @@ imapclient
 uvicorn
 pydantic
 openai
+pyjwt

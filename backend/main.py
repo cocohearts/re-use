@@ -1,10 +1,12 @@
 import os
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import Optional, List
+
+from backend.auth_middleware import AuthMiddleware
 
 # Load environment variables from .env file
 load_dotenv()
@@ -12,7 +14,8 @@ load_dotenv()
 # Initialize Supabase client
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # FastAPI app instance
 app = FastAPI()
@@ -29,6 +32,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(AuthMiddleware)
 
 # Schema for creating a user
 class CreateUserInput(BaseModel):
@@ -138,22 +143,6 @@ async def edit_item(item_id: str, data: ItemInput):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
-
-# Set user karma: given user id, set karma
-@app.post("/set-user-karma/{user_id}")
-async def set_user_karma(user_id: str, karma: float):
-    try:
-        response = (supabase.table("users").update(
-            {"karma": karma}).eq("id", user_id).execute())
-
-        if len(response.data) == 0:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        return {"message": "User karma updated successfully", "data": response}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
 @app.post("/get-user-karma/{user_id}")
 async def get_user_karma(user_id: str):
     try:
@@ -162,8 +151,8 @@ async def get_user_karma(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/get-user/{user_id}")
-async def get_user(user_id: str):
+@app.get("/api/get-user/{user_id}")
+async def get_user(user_id: str, request: Request):
     """
     Retrieve user data by user ID.
 
@@ -255,58 +244,63 @@ async def get_item(item_id: str):
 #         raise HTTPException(status_code=400, detail=str(e))
 
 # Returns paginated items with a similar name
-@app.get("/search-items-by-name/{name}")
-async def search_items_by_name(name: str, page: int = 1, page_size: int = 5):
+@app.get("/search-items-by-name/")
+async def search_items_by_name(name: str = "", page: int = 1, page_size: int = 10):
     """
-    Search for items by name with pagination.
+    Search for items by name with pagination, sorted by recency.
 
     Args:
         name (str): The search term.
         page (int): The page number (default: 1).
-        page_size (int): The number of items per page (default: 5, max: 5).
+        page_size (int): The number of items per page (default: 10, max: 10).
 
     Returns:
         A message and the paginated list of items.
     """
     try:
-        # Validate page_size (max 5)
-        page_size = min(page_size, 5)
+        # Validate page_size (max 10)
+        page_size = min(page_size, 10)
         
         # Calculate the offset for pagination
         offset = (page - 1) * page_size
 
-        # Use ilike to search for items where the name contains the search term, case-insensitive
-        response = (
-            supabase.table("items")
-            .select("*")
-            .ilike("name", f"%{name}%")
-            .range(offset, offset + page_size - 1)
-            .execute()
-        )
+        # Adjust query based on whether the search term is empty
+        query = supabase.table("items").select("*")
+        if name:
+            query = query.ilike("name", f"%{name}%")
+        
+        # Sort by recency using the `created_at` column
+        response = query.order("created_at", desc=True).range(offset, offset + page_size - 1).execute()
 
         return {"message": "Items retrieved successfully", "data": response.data}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+
 # Get number of pages for a given search query
-@app.get("/get-number-of-pages/{name}")
-async def get_number_of_pages(name: str, page_size: int = 5):
+@app.get("/get-number-of-pages/")
+async def get_number_of_pages(name: str = "", page_size: int = 10):
     """
-    Calculate the total number of pages required for a given search query.
+    Calculate the total number of pages required for a given search query, sorted by recency.
 
     Args:
         name (str): The search term.
-        page_size (int): The number of items per page (default: 5, max: 5).
+        page_size (int): The number of items per page (default: 10, max: 10).
 
     Returns:
         A message and the total number of pages.
     """
     try:
-        # Validate page_size (max 5)
-        page_size = min(page_size, 5)
+        # Validate page_size (max 10)
+        page_size = min(page_size, 10)
 
-        # Get the total count of items matching the search term
-        response = supabase.table("items").select("id", count="exact").ilike("name", f"%{name}%").execute()
+        # Adjust query based on whether the search term is empty
+        query = supabase.table("items").select("id", count="exact")
+        if name:
+            query = query.ilike("name", f"%{name}%")
+
+        response = query.execute()
 
         total_items = response.count  # Supabase includes the total count in the response
         total_pages = (total_items + page_size - 1) // page_size  # Calculate total number of pages

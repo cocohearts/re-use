@@ -1,5 +1,5 @@
 import re
-from typing import List
+from typing import List, Tuple
 import requests
 from supabase import create_client, Client
 import os
@@ -21,17 +21,18 @@ supabase: Client = create_client(supabase_url, supabase_key)
 
 
 class Email:
-    def __init__(self, subject, from_, date, body, location, name=""):
+    def __init__(self, subject, from_, date, body, location, mailing_list, can_self_pickup, name=""):
         self.subject = subject
         self.from_ = from_
         self.date = date
         self.body = body
         self.location = location
+        self.mailing_list = mailing_list  # New mandatory field for mailing list
         self.name = name
         self.links = []
-
+        self.can_self_pickup = can_self_pickup
     def __str__(self):
-        return f"Subject: {self.subject}\nFrom: {self.from_}\nName: {self.name}\nDate: {self.date}\nBody: {self.body}\nLinks: {self.links}"
+        return f"Subject: {self.subject}\nFrom: {self.from_}\nMailing List: {self.mailing_list}\nName: {self.name}\nDate: {self.date}\nCan self-pickup: {self.can_self_pickup}\nBody: {self.body}\nLinks: {self.links}"
 
     def to_json(self):
         return {
@@ -40,6 +41,8 @@ class Email:
             "name": self.subject,
             "description": self.body,
             "location": self.location,
+            "can_self_pickup": self.can_self_pickup,
+            "mailing_list": self.mailing_list,  # Include mailing list in JSON
             "photo_urls": self.links
         }
 
@@ -78,16 +81,16 @@ def get_logs(login_url, url) -> str:
     return None
 
 
-def get_location(email_body: str) -> str:
+def get_location_and_can_self_pickup(email_body: str) -> Tuple[str, bool]:
     try:
         # Prepare the message for ChatGPT
-        system_prompt_1 = """You are a helpful assistant that extracts pick-up locations from email bodies. Do not include any other text in the response. If the location is not found, return "Location not found".
+        system_prompt_1 = """You are a helpful assistant that extracts pick-up locations and whether the user can self-pickup from email bodies. Do not include any other text in the response. Return the location and a boolean for whether the user can self-pickup. If the location is not found, return "Location not found, False".
         
         All pickups happen in or around MIT campus. Also includes Boston, Harvard."""
 
         messages = [
             {"role": "system", "content": system_prompt_1},
-            {"role": "user", "content": f"What is the pick-up location mentioned in this email body?\n\n{email_body}"}
+            {"role": "user", "content": f"What is the pick-up location mentioned in this email body, and can the user self-pickup?\n\n{email_body}"}
         ]
 
         # Make the API call to ChatGPT
@@ -98,9 +101,12 @@ def get_location(email_body: str) -> str:
 
         # Extract the assistant's reply
         content = response.choices[0].message.content
+        last_comma_index = content.rfind(',')
+        location = content[:last_comma_index].strip()
+        can_self_pickup = content[last_comma_index + 1:].strip() == 'True'
 
-        print("Building: ", content)
-        return content
+        print("Building: ", location, "Can self-pickup: ", can_self_pickup)
+        return location, can_self_pickup
 
         # system_prompt_2 = """You are a helpful assistant that extracts geolocation from a description of a location near MIT. Use the following format:
         # Latitude: xx.xxxxxx
@@ -176,15 +182,18 @@ def get_name_addr_from_line(line):
     return email_from, sender_name
 
 
-def get_subj_from_line(line):
+def get_subj_and_mailing_list_from_line(line):
     subject = line[8:].strip()
     if subject.startswith('[Reuse]'):
         email_subject = subject[7:].strip()
+        mailing_list = "Reuse"
     elif subject.startswith('[Free-food]'):
         email_subject = subject[11:].strip()
+        mailing_list = "Free-food"
     else:
         email_subject = subject
-    return email_subject
+        mailing_list = "Unknown"
+    return email_subject, mailing_list
 
 
 def is_opportunity(subject, body):
@@ -257,7 +266,7 @@ def parse_logs(log_text: str) -> List[Email]:
                 email_date = line[5:].strip()
 
             elif line.startswith('Subject:'):
-                email_subject = get_subj_from_line(line)
+                email_subject, mailing_list = get_subj_and_mailing_list_from_line(line)
                 if email_subject.startswith(('Reuse Digest', 'Fwd:', 'Re:')):
                     is_useless = True
                     break
@@ -283,14 +292,14 @@ def parse_logs(log_text: str) -> List[Email]:
         # Post-processing
         if is_useless or exists:
             continue
-
+        
         email_body = '\n'.join(body_lines).strip()
-
         if not is_opportunity(email_subject, email_body):
             continue
 
+        email_location, can_self_pickup = get_location_and_can_self_pickup(email_body)
         email = Email(email_subject, email_from,
-                      email_date, email_body, "No known location", sender_name)
+                      email_date, email_body, email_location, mailing_list, can_self_pickup, sender_name)
 
         # Find all links in the email body, excluding specific domains
         email.links = [
@@ -333,8 +342,9 @@ def check_existence(date, subject):
 
 
 def write_to_db(email: Email):
-    email_location = get_location(email.subject + "\n" + email.body)
+    email_location, can_self_pickup = get_location_and_can_self_pickup(email.subject + "\n" + email.body)
     email.location = email_location
+    email.can_self_pickup = can_self_pickup
     email_json = email.to_json()
     print(email_json)
     supabase.table("items").insert(email.to_json()).execute()
