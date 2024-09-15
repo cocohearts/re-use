@@ -70,9 +70,10 @@ class ItemInput(BaseModel):
     quality: str
     name: str
     description: str
-    other_urls: List[str]
+    other_urls: List[str] = []
     photo_urls: List[str]
-    can_self_pickup: bool
+    can_self_pickup: bool = False
+    location: str = ""
 
 
 class BidInput(BaseModel):
@@ -119,13 +120,20 @@ async def create_new_transaction(data: CreateTransactionInput):
 
 # Create item: upload photo to item_photos bucket, save item in DB
 @api.post("/create-item")
-async def create_item(data: ItemInput):
+async def create_item(data: ItemInput, request: Request):
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthenticated users cannot make listings.")
+    
+    seller_id = user["sub"]
+    seller_email = user["email"]
+
     try:
         # Insert item data into the items table
         response = (
             supabase.table("items")
             .insert({
-                "seller_id": data.seller_id,
+                "seller_id": seller_id,
                 "photo_urls": data.photo_urls,
                 "can_self_pickup": data.can_self_pickup,
                 "other_urls": data.other_urls,
@@ -133,7 +141,7 @@ async def create_item(data: ItemInput):
                 "name": data.name,
                 "description": data.description,
                 "location": data.location,
-                "email": data.email
+                "email": seller_email
             })
             .execute()
         )
@@ -231,6 +239,44 @@ async def accept_bid(bid_id: str):
         return {"message": "Bid updated successfully and email sent to the bidder", "data": response}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+@api.post("/review-user/{bid_id}")
+async def review_user(bid_id: str, review: int, reviewee_id: str):
+    try:
+        if review < 1 or review > 5:
+            raise HTTPException(status_code=400, detail="Review must be between 1 and 5.")
+
+        # Get the user associated with the bid
+        existing_bid = supabase.table("bids").select("bidder_id, item_id").eq("id", bid_id).execute()
+        if not existing_bid.data:
+            raise HTTPException(status_code=400, detail="Bid not found.")
+
+        bidder_id = existing_bid.data[0]['bidder_id']
+        item_id = existing_bid.data[0]['item_id']
+
+        # Get the seller_id from the items table using the item_id
+        existing_item = supabase.table("items").select("seller_id").eq("id", item_id).execute()
+        if not existing_item.data:
+            raise HTTPException(status_code=400, detail="Item not found.")
+
+        seller_id = existing_item.data[0]['seller_id']
+
+        # Validate the reviewee ID
+        if reviewee_id not in [bidder_id, seller_id]:
+            raise HTTPException(status_code=400, detail="Reviewee ID must be either the bidder or the seller.")
+
+        # Adjust karma based on the review
+        karma_adjustment = review - 3  # Assuming 3 is neutral
+        response = supabase.table("users").update({
+            "karma": supabase.raw("karma + {}".format(karma_adjustment))
+        }).eq("id", reviewee_id).execute()
+
+        return {"message": "User karma adjusted successfully", "data": response}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+
 
 
 @ api.get("/get-accepted-bids-as-seller/{user_id}")
