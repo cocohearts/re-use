@@ -8,7 +8,7 @@ import { useAuthContext } from '@/components/AuthProvider';
 
 export default function SingleItem() {
   const { uuid } = useParams();
-  const {user} = useAuthContext();
+  const { user } = useAuthContext();
   const [item, setItem] = useState<Tables<'items'> | undefined>(undefined);
   const [seller, setSeller] = useState<Tables<'users'> | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
@@ -67,16 +67,20 @@ export default function SingleItem() {
 
   const toggleBid = () => {
     if (!user || !item) return;
-    if (bids.find(x => x.bidder_id === user.id) !== undefined) {
-      post('/api/cancel-bid/' + item.id, {}).then(resp => {
-        setBids(resp.data);
-      }).catch(alert);
+    if (bids.find((x) => x.bidder_id === user.id) !== undefined) {
+      post('/api/cancel-bid/' + item.id, {})
+        .then((resp) => {
+          setBids(resp.data);
+        })
+        .catch(alert);
     } else {
-      post('/api/bid-for-item/' + item.id, {}).then(resp => {
-        setBids(resp.data);
-      }).catch(alert);
+      post('/api/bid-for-item/' + item.id, {})
+        .then((resp) => {
+          setBids(resp.data);
+        })
+        .catch(alert);
     }
-  }
+  };
 
   return item ? (
     <>
@@ -105,11 +109,11 @@ export default function SingleItem() {
       )}
       <h1 className="my-2 text-xl text-pine-900">{item.name.slice(0, 100)}</h1>
       <div className="my-2 text-lg text-pine-900">{item.quality}</div>
-      <div className="my-2 text-lg text-pine-900">
-        <MapPin className="inline" /> {item.location}
+      <div className="my-2 flex items-center gap-2 text-lg text-pine-900">
+        <MapPin className="inline" size={16} /> {item.location}
       </div>
       <div className="flex flex-col items-center justify-center">
-        {user?.id && (seller?.id !== user?.id) && (
+        {user?.id && seller?.id !== user?.id && (
           <button
             className={
               'mt-[24px] w-[min(15rem,100%)] rounded-lg py-[13px] text-center text-lg text-white' +
@@ -140,7 +144,7 @@ export default function SingleItem() {
         <>
           <hr className="my-3 border-pine-900 border-opacity-30" />
           <h1 className="my-2 text-xl text-pine-900">seller</h1>
-          <div className="mx-4 flex flex-row items-center justify-between gap-3">
+          <div className="flex flex-row items-center justify-between gap-3">
             <div className="flex flex-row items-center gap-3">
               {seller.pfp_url ? (
                 <img src={seller.pfp_url} className="h-10 w-10 rounded-full" />
@@ -150,7 +154,7 @@ export default function SingleItem() {
               <div className="stroke-pine-900 text-pine-900">
                 <div className="text-xl font-bold">{seller.name}</div>
                 <div className="flex items-center gap-1 text-base">
-                  <Star className="inline" />
+                  <Star className="inline" size={16} />
                   <span>{Math.round(seller.karma || 0)} karma</span>
                 </div>
               </div>
@@ -164,10 +168,10 @@ export default function SingleItem() {
         </>
       )}
     </>
-  ) : loading ? (
+  ) : loading || true ? (
     <>
       <Skeleton className="my-2 h-[100px] w-[200px] rounded-lg" />
-      <div className="flex flex-row">
+      <div className="mt-2 flex flex-row">
         {Array(2).map((_) => (
           <Skeleton className="my-2 h-10 w-10 rounded-lg" />
         ))}
