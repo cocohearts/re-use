@@ -29,14 +29,14 @@ export default function Navbar() {
               <Menu className="stroke-pine-900" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left">
+          <SheetContent className="text-pine-900" side="left">
             <SheetHeader className="mb-4">
               <SheetTitle>
                 <a href="/">re-use</a>
               </SheetTitle>
             </SheetHeader>
             <div className="flex flex-col">
-              <a className="flex items-center gap-4 px-2 py-3" href="/profile">
+              <a className="flex items-center gap-4 px-2 py-3" href="/">
                 <Store className="h-6" /> browse items
               </a>
               <a className="flex items-center gap-4 px-2 py-3" href="/add-item">
