@@ -1,10 +1,12 @@
 import os
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import Optional, List
+
+from backend.auth_middleware import AuthMiddleware
 
 # Load environment variables from .env file
 load_dotenv()
@@ -12,7 +14,8 @@ load_dotenv()
 # Initialize Supabase client
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # FastAPI app instance
 app = FastAPI()
@@ -29,6 +32,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(AuthMiddleware)
 
 # Schema for creating a user
 class CreateUserInput(BaseModel):
@@ -146,8 +151,8 @@ async def get_user_karma(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/get-user/{user_id}")
-async def get_user(user_id: str):
+@app.get("/api/get-user/{user_id}")
+async def get_user(user_id: str, request: Request):
     """
     Retrieve user data by user ID.
 
@@ -304,6 +309,32 @@ async def get_number_of_pages(name: str, page_size: int = 10):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# Get number of pages for a given search query
+@app.get("/get-number-of-pages/{name}")
+async def get_number_of_pages(name: str, page_size: int = 5):
+    """
+    Calculate the total number of pages required for a given search query.
+
+    Args:
+        name (str): The search term.
+        page_size (int): The number of items per page (default: 5, max: 5).
+
+    Returns:
+        A message and the total number of pages.
+    """
+    try:
+        # Validate page_size (max 5)
+        page_size = min(page_size, 5)
+
+        # Get the total count of items matching the search term
+        response = supabase.table("items").select("id", count="exact").ilike("name", f"%{name}%").execute()
+
+        total_items = response.count  # Supabase includes the total count in the response
+        total_pages = (total_items + page_size - 1) // page_size  # Calculate total number of pages
+
+        return {"message": "Total number of pages calculated successfully", "data": {"total_pages": total_pages}}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

@@ -35,7 +35,9 @@ export default function Navbar() {
           </div>
         </div>
         <div className="flex items-center">
-          {user ? null : ( // put a PFP here later.
+          {user ? (
+            <CircleUser className="cursor-pointer stroke-pine-900" /> // put a PFP here later.
+          ) : (
             <Dialog>
               <DialogTrigger>
                 <CircleUser className="cursor-pointer stroke-pine-900" />
