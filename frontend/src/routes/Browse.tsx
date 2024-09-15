@@ -66,7 +66,7 @@ export default function Browse() {
       <h1 className="mb-4 text-3xl">browse listings</h1>
       <>
         {loading ? (
-          <div className="grid w-full grid-cols-2 grid-rows-2 gap-2">
+          <div className="grid w-full grid-cols-2 grid-rows-2 gap-2 md:grid-cols-4">
             {[...Array(6)].map((_, i) => (
               <div className="flex flex-col gap-2" key={i}>
                 <Skeleton className="aspect-square w-full" />
@@ -76,7 +76,7 @@ export default function Browse() {
             ))}
           </div>
         ) : (
-          <div className="mt-6 grid grid-cols-2 gap-3">
+          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
             {items.map((item, idx) => (
               <div
                 className="my-2 w-full cursor-pointer overflow-clip duration-200 hover:scale-105"
