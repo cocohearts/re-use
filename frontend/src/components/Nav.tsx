@@ -4,6 +4,7 @@ import { CircleUser, Menu, Search } from 'lucide-react';
 import { Dialog, DialogTrigger } from '@radix-ui/react-dialog';
 import LoginModal from './LoginModal';
 import { useNavigate } from 'react-router-dom';
+import ProfilePicture from './ProfilePicture';
 
 export default function Navbar() {
   const { user } = useAuthContext();
@@ -16,7 +17,7 @@ export default function Navbar() {
         <div>
           <Menu className="stroke-pine-900" />
         </div>
-        <div className="w-full">
+        <div className="w-full max-w-lg">
           <div className="flex h-full items-center gap-2 rounded-full bg-pine-50 p-2 text-pine-900">
             <Search className="ml-1 stroke-pine-900" />
             <input
@@ -26,8 +27,8 @@ export default function Navbar() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyUp={(e) => {
-                if (e.key === "Enter") {
-                  navigate("/?q=" + searchQuery)
+                if (e.key === 'Enter') {
+                  navigate('/?q=' + searchQuery);
                 }
               }}
               placeholder="search"
@@ -36,7 +37,7 @@ export default function Navbar() {
         </div>
         <div className="flex items-center">
           {user ? (
-            <CircleUser className="cursor-pointer stroke-pine-900" /> // put a PFP here later.
+            <ProfilePicture user={user} />
           ) : (
             <Dialog>
               <DialogTrigger>
