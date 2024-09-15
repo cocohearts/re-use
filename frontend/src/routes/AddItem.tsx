@@ -10,10 +10,11 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, X } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import supabase from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { useAuthContext } from '@/components/AuthProvider';
 
 export default function AddItemPage() {
   const photoUploadRef: any = useRef(null);
@@ -27,6 +28,28 @@ export default function AddItemPage() {
       publicUrl: string | null;
     }[]
   >([]);
+  const [itemQuality, setItemQuality] = useState<string>('unspecified');
+  const [itemName, setItemName] = useState<string>('');
+  const [itemLocation, setItemLocation] = useState<string>('');
+  const [itemDescription, setItemDescription] = useState<string>('');
+  const [itemTags, setItemTags] = useState<string>('');
+  const [readyToList, setReadyToList] = useState<boolean>(false);
+
+  const { user, token: authToken } = useAuthContext();
+
+  useEffect(() => {
+    setReadyToList(
+      photos.length > 0 &&
+        photos.reduce(
+          (good: boolean, photo: any) =>
+            good && photo.publicUrl && photo.uploaded,
+          true,
+        ) &&
+        itemName.trim() !== '' &&
+        itemLocation.trim() !== '' &&
+        itemDescription.trim() !== '',
+    );
+  }, [itemQuality, itemName, itemLocation, itemDescription, itemTags, photos]);
 
   const onPhotoUpload = async (e: any) => {
     const { files }: { files: File[] } = e.target;
@@ -98,12 +121,38 @@ export default function AddItemPage() {
     await supabase.storage.from('item_photos').remove([photo.filename]);
   };
 
+  const submitListing = async () => {
+    // Grab ALL the information
+    if (!readyToList) return;
+    const postBody = {
+      seller_id: user?.id,
+      quality: itemQuality,
+      name: itemName,
+      description: itemDescription,
+      photo_urls: photos.map((photo) => photo.publicUrl),
+      tags: itemTags.split(',').map((tag) => tag.trim()),
+      location: itemLocation,
+    };
+    console.log('posting to /api/create-item...');
+    console.log('body:', postBody);
+    const res = await fetch('/api/create-item', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify(postBody),
+    });
+    console.log('done.');
+    console.log(await res.json());
+  };
+
   return (
     <div className="text-pine-900">
       <h1 className="mb-4 text-3xl">list an item</h1>
 
       {/* Photos */}
-      <span className="">photos &bull; {photos.length}/10</span>
+      <span className="">photos * ({photos.length}/10)</span>
       <div className="mb-4 mt-1.5 flex flex-col overflow-x-auto">
         <div className="flex h-40 gap-4">
           {/* All the photos in an array */}
@@ -117,21 +166,21 @@ export default function AddItemPage() {
                 <div
                   className={cn(
                     photo.uploaded ? 'opacity-0' : 'opacity-80',
-                    'absolute z-10 flex h-full w-full items-center justify-center bg-neutral-900 text-white transition-all',
+                    'absolute z-10 flex h-full w-full items-center justify-center bg-neutral-900 text-white transition-all duration-1000',
                   )}
                 >
                   uploading...
                 </div>
                 {/* Delete button */}
                 <button
-                  className="absolute right-2 top-2 rounded-full bg-neutral-900/30"
+                  className="absolute right-2 top-2 z-10 rounded-full bg-neutral-900/30"
                   onClick={() => removePhoto(photo.id)}
                 >
                   <X className="stroke-white p-0.5" />
                 </button>
                 <img
                   className={cn(
-                    'h-full object-cover transition-all',
+                    'mx-auto h-full object-cover transition-all',
                     photo.publicUrl ? 'blur-0' : 'blur-sm',
                   )}
                   src={photo.publicUrl || photo.src}
@@ -172,12 +221,13 @@ export default function AddItemPage() {
             placeholder="gallon of hand sanitizer"
             autoComplete="off"
             spellCheck={false}
+            onChange={(e) => setItemName(e.target.value)}
           />
         </div>
         {/* Quality */}
         <div>
           <Label htmlFor="quality-input">quality</Label>
-          <Select>
+          <Select onValueChange={(value) => setItemQuality(value)}>
             <SelectTrigger className="mt-1 w-full">
               <SelectValue placeholder="select one" />
             </SelectTrigger>
@@ -199,6 +249,7 @@ export default function AddItemPage() {
             placeholder="masseeh hall, room 4510"
             autoComplete="off"
             spellCheck={false}
+            onChange={(e) => setItemLocation(e.target.value)}
           />
         </div>
         {/* Description */}
@@ -210,18 +261,22 @@ export default function AddItemPage() {
             placeholder="a highly sanitizing gallon of hand sanitizer"
             autoComplete="off"
             spellCheck={false}
+            onChange={(e) => setItemDescription(e.target.value)}
           />
         </div>
         {/* Tags */}
         <div>
           <Label htmlFor="tags-input">tags (optional)</Label>
-          <p className="text-sm opacity-80">a comma-separated list of tags</p>
+          <p className="text-sm opacity-80">
+            enter a comma-separated list of tags
+          </p>
           <Input
             className="mt-1"
             id="tags-input"
-            placeholder="cleaning, gallon, sanitation"
+            placeholder="cleaning, health, sanitation"
             autoComplete="off"
             spellCheck={false}
+            onChange={(e) => setItemTags(e.target.value)}
           />
         </div>
         {/* Self-pickup */}
@@ -244,7 +299,12 @@ export default function AddItemPage() {
       </div>
 
       {/* Submit button */}
-      <Button className="w-full" variant="filled">
+      <Button
+        className="w-full"
+        variant="filled"
+        onClick={submitListing}
+        disabled={!readyToList}
+      >
         list item
       </Button>
     </div>
