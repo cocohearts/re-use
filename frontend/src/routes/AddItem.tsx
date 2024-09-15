@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
   SelectContent,
@@ -13,31 +12,90 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import supabase from '@/lib/supabase';
+import { cn } from '@/lib/utils';
 
 export default function AddItemPage() {
   const photoUploadRef: any = useRef(null);
-  const [photos, setPhotos] = useState<{ src: string; id: string }[]>([]);
+  const [photos, setPhotos] = useState<
+    {
+      src: string;
+      id: string;
+      file: File;
+      uploaded: boolean;
+      filename: string;
+      publicUrl: string | null;
+    }[]
+  >([]);
 
-  const onPhotoUpload = (e: any) => {
+  const onPhotoUpload = async (e: any) => {
     const { files }: { files: File[] } = e.target;
     if (files.length === 0) return;
 
-    Array.from(files).forEach((file: File) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (!e || !e.target) return;
-        const id = uuidv4();
-        setPhotos((photos) => [
-          ...photos,
-          { src: e.target?.result as string, id },
-        ]);
-      };
-      reader.readAsDataURL(file);
-    });
+    // Process each file and add it to the `photos` state array
+    await Promise.all(
+      Array.from(files).map(async (file: File) => {
+        const reader = new FileReader();
+        const photoId = uuidv4();
+
+        // Extract extension from file
+        const fileExtension = file.name.split('.').pop();
+        if (!fileExtension) return;
+
+        const photoFilename = `${photoId}.${fileExtension}`;
+
+        // Add file to lsit of photos and upload
+        reader.onload = async (e) => {
+          if (!e || !e.target) return;
+          setPhotos((photos) => [
+            ...photos,
+            {
+              src: e.target?.result as string,
+              id: photoId,
+              filename: photoFilename,
+              file,
+              uploaded: false,
+              publicUrl: null,
+            },
+          ]);
+
+          // Upload file to supabase storage
+          const { data, error } = await supabase.storage
+            .from('item_photos')
+            .upload(photoFilename, file, {
+              cacheControl: '3600',
+              upsert: true,
+            });
+
+          if (error || !data || data?.fullPath === undefined) {
+            removePhoto(photoId);
+            return;
+          }
+
+          // Get public URL of photo
+          const { publicUrl } = supabase.storage
+            .from('item_photos')
+            .getPublicUrl(data.path).data;
+
+          console.log(publicUrl);
+
+          setPhotos((photos) =>
+            photos.map((photo) => {
+              if (photo.id !== photoId) return photo;
+              return { ...photo, uploaded: true, publicUrl };
+            }),
+          );
+        };
+        reader.readAsDataURL(file);
+      }),
+    );
   };
 
-  const removePhoto = (id: string) => {
+  const removePhoto = async (id: string) => {
+    const photo = photos.find((photo) => photo.id === id);
+    if (!photo) return;
     setPhotos((photos) => photos.filter((photo) => photo.id !== id));
+    await supabase.storage.from('item_photos').remove([photo.filename]);
   };
 
   return (
@@ -55,13 +113,29 @@ export default function AddItemPage() {
                 className="relative h-full w-40 shrink-0 overflow-hidden rounded-md"
                 key={photo.id}
               >
+                {/* Overlay */}
+                <div
+                  className={cn(
+                    photo.uploaded ? 'opacity-0' : 'opacity-80',
+                    'absolute z-10 flex h-full w-full items-center justify-center bg-neutral-900 text-white transition-all',
+                  )}
+                >
+                  uploading...
+                </div>
+                {/* Delete button */}
                 <button
                   className="absolute right-2 top-2 rounded-full bg-neutral-900/30"
                   onClick={() => removePhoto(photo.id)}
                 >
                   <X className="stroke-white p-0.5" />
                 </button>
-                <img className="h-full object-cover" src={photo.src} />
+                <img
+                  className={cn(
+                    'h-full object-cover transition-all',
+                    photo.publicUrl ? 'blur-0' : 'blur-sm',
+                  )}
+                  src={photo.publicUrl || photo.src}
+                />
               </div>
             );
           })}
@@ -69,6 +143,7 @@ export default function AddItemPage() {
             className="flex h-full w-40 shrink-0 flex-col gap-1"
             variant="default"
             onClick={() => photoUploadRef?.current?.click()}
+            disabled={photos.length >= 10}
           >
             <Plus />
             <span>add photo</span>
@@ -83,6 +158,7 @@ export default function AddItemPage() {
         ref={photoUploadRef}
         onChange={onPhotoUpload}
         multiple
+        accept="image/jpeg, image/png"
       />
 
       {/* Form */}
@@ -120,7 +196,7 @@ export default function AddItemPage() {
           <Input
             className="mt-1"
             id="location-input"
-            placeholder="masseeh hall"
+            placeholder="masseeh hall, room 4510"
             autoComplete="off"
             spellCheck={false}
           />
