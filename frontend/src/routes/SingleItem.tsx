@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import supabase from '@/lib/supabase';
 import { Tables } from '../../database.types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CircleUser, MailOpen, MapPin, Star } from 'lucide-react';

@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import supabase from '@/lib/supabase';
 import { Tables } from 'database.types';
 import {
   Pagination,
