@@ -1,8 +1,7 @@
 import supabase from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import React, { createContext, useState, useEffect, useContext } from 'react';
-
-const supabaseProjectId = import.meta.env.VITE_PROJECT_REF;
+import { getToken } from '@/lib/utils';
 
 const AuthContext = createContext<{
   user: User | null;
@@ -38,12 +37,3 @@ export default function AuthProvider(props: { children: React.ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
-const getToken = () => {
-  const storageKey = `sb-${supabaseProjectId}-auth-token`;
-  const sessionDataString = localStorage.getItem(storageKey);
-  const sessionData = JSON.parse(sessionDataString || 'null');
-  const token = sessionData?.access_token;
-
-  return token;
-};
