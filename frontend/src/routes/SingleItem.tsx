@@ -190,7 +190,7 @@ export default function SingleItem() {
         <>
           <hr className="my-3 border-pine-900 border-opacity-30" />
           <h1 className="my-2 text-xl text-pine-900">seller</h1>
-          <div className="mx-4 flex flex-row items-center justify-between gap-3">
+          <div className="flex flex-row items-center justify-between gap-3">
             <div className="flex flex-row items-center gap-3">
               {seller.pfp_url ? (
                 <img src={seller.pfp_url} className="h-10 w-10 rounded-full" />
@@ -206,9 +206,9 @@ export default function SingleItem() {
               </div>
             </div>
             <div className="flex flex-row items-center">
-              <button className="rounded-lg bg-pine-900 px-4 py-2 text-white">
+              <Button variant={"filled"} className="rounded-lg bg-pine-900">
                 contact
-              </button>
+              </Button>
             </div>
           </div>
         </>
