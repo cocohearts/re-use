@@ -244,8 +244,8 @@ async def get_item(item_id: str):
 #         raise HTTPException(status_code=400, detail=str(e))
 
 # Returns paginated items with a similar name
-@app.get("/search-items-by-name/{name}")
-async def search_items_by_name(name: str, page: int = 1, page_size: int = 10):
+@app.get("/search-items-by-name/")
+async def search_items_by_name(name: str = "", page: int = 1, page_size: int = 10):
     """
     Search for items by name with pagination, sorted by recency.
 
@@ -279,8 +279,8 @@ async def search_items_by_name(name: str, page: int = 1, page_size: int = 10):
 
 
 # Get number of pages for a given search query
-@app.get("/get-number-of-pages/{name}")
-async def get_number_of_pages(name: str, page_size: int = 10):
+@app.get("/get-number-of-pages/")
+async def get_number_of_pages(name: str = "", page_size: int = 10):
     """
     Calculate the total number of pages required for a given search query, sorted by recency.
 
@@ -301,33 +301,6 @@ async def get_number_of_pages(name: str, page_size: int = 10):
             query = query.ilike("name", f"%{name}%")
 
         response = query.execute()
-
-        total_items = response.count  # Supabase includes the total count in the response
-        total_pages = (total_items + page_size - 1) // page_size  # Calculate total number of pages
-
-        return {"message": "Total number of pages calculated successfully", "data": {"total_pages": total_pages}}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-# Get number of pages for a given search query
-@app.get("/get-number-of-pages/{name}")
-async def get_number_of_pages(name: str, page_size: int = 5):
-    """
-    Calculate the total number of pages required for a given search query.
-
-    Args:
-        name (str): The search term.
-        page_size (int): The number of items per page (default: 5, max: 5).
-
-    Returns:
-        A message and the total number of pages.
-    """
-    try:
-        # Validate page_size (max 5)
-        page_size = min(page_size, 5)
-
-        # Get the total count of items matching the search term
-        response = supabase.table("items").select("id", count="exact").ilike("name", f"%{name}%").execute()
 
         total_items = response.count  # Supabase includes the total count in the response
         total_pages = (total_items + page_size - 1) // page_size  # Calculate total number of pages
