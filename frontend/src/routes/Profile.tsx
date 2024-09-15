@@ -91,7 +91,11 @@ export default function ProfilePage() {
         </span>
         <div className="flex gap-2 text-xl">
           <Leaf />
-          <span className="font-bold">235 kg</span>
+          {userInfo ? (
+            <span className="font-bold">235 kg</span>
+          ) : (
+            <Skeleton className="h-7 w-16" />
+          )}
         </div>
       </div>
 
