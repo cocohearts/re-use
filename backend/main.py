@@ -57,7 +57,10 @@ class ItemInput(BaseModel):
     quality: str
     name: str
     description: str
+    other_urls: List[str]
     photo_urls: List[str]
+    can_self_pickup: bool
+
 
 
 # Create user: given email, set karma to 0
@@ -108,6 +111,8 @@ async def create_item(data: ItemInput):
             .insert({
                 "seller_id": data.seller_id,
                 "photo_urls": data.photo_urls,
+                "can_self_pickup": data.can_self_pickup,
+                "other_urls": data.other_urls,
                 "quality": data.quality,
                 "name": data.name,
                 "description": data.description,
@@ -130,6 +135,8 @@ async def edit_item(item_id: str, data: ItemInput):
             supabase.table("items")
             .update({
                 "photo_urls": data.photo_urls,
+                "can_self_pickup": data.can_self_pickup,
+                "other_urls": data.other_urls,
                 "quality": data.quality,
                 "name": data.name,
                 "description": data.description,
