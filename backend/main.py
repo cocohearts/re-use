@@ -62,7 +62,6 @@ class ItemInput(BaseModel):
     can_self_pickup: bool
 
 
-
 class BidInput(BaseModel):
     bidder_id: str
     created_at: str
@@ -198,6 +197,56 @@ async def get_accepted_bids_as_buyer(user_id: str):
         response = supabase.table("bids").select(
             "*").eq("buyer_id", user_id).eq("accepted", True).execute()
         return {"message": "Accepted bids retrieved successfully", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/get-item-address/{user_id}")
+async def get_item_address(user_id: str):
+    try:
+        response = supabase.table("items").select(
+            "gmaps_location").eq("seller_id", user_id).execute()
+        return {"message": "Item address retrieved successfully", "data": response.data[0]['gmaps_location']}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/get-item-location/{user_id}")
+async def get_item_location(user_id: str):
+    try:
+        response = supabase.table("items").select(
+            "gis_location").eq("seller_id", user_id).execute()
+        return {"message": "Item location retrieved successfully", "data": response.data[0]['gis_location']}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/get-distance-to-item/{item_id}")
+async def get_distance_to_item(item_id: str, data: tuple[float, float]):
+    try:
+        response = supabase.table("bids").select(
+            "gis_location").eq("item_id", item_id).execute()
+        item_location = response.data[0]['gis_location']
+        user_location = data
+
+        # Calculate distance using Haversine formula
+        from math import radians, sin, cos, sqrt, atan2
+
+        R = 20902231  # Earth's radius in feet
+
+        lat1, lon1 = radians(item_location[0]), radians(item_location[1])
+        lat2, lon2 = radians(user_location[0]), radians(user_location[1])
+
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+
+        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+        c = 2 * atan2(sqrt(a), sqrt(1-a))
+
+        distance = R * c
+
+        return {"message": "Distance calculated successfully", "data": {"distance_ft": distance}}
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
