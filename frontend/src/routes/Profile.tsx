@@ -1,5 +1,5 @@
 import { useAuthContext } from '@/components/AuthProvider';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import {

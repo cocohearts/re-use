@@ -5,6 +5,8 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import Optional, List
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from backend.auth_middleware import AuthMiddleware
 
@@ -17,15 +19,20 @@ SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
+DIST_PATH = os.getenv("DIST_PATH")
+
 # FastAPI app instance
-app = FastAPI()
+app = FastAPI(title="app")
+api = FastAPI(title="existing api")
+
+app.mount('/api', api)
 
 origins = [
     "http://localhost:5173",
     "http://localhost:8000",
 ]
 
-app.add_middleware(
+api.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
@@ -33,7 +40,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(AuthMiddleware)
+api.add_middleware(AuthMiddleware)
+
+print("DIST_PATH:", DIST_PATH)
+if DIST_PATH:
+    app.mount('/', StaticFiles(directory=DIST_PATH, html=True), name="static")
 
 # Schema for creating a user
 
@@ -70,7 +81,7 @@ class BidInput(BaseModel):
 
 
 # Create user: given email, set karma to 0
-@app.post("/api/create-user")
+@api.post("/create-user")
 async def create_user(data: CreateUserInput):
     try:
         response = (
@@ -85,7 +96,7 @@ async def create_user(data: CreateUserInput):
 
 
 # Create transaction: given buyer_id, seller_id, item_id
-@app.post("/api/create-new-transaction")
+@api.post("/create-new-transaction")
 async def create_new_transaction(data: CreateTransactionInput):
     try:
         response = (
@@ -108,7 +119,7 @@ async def create_new_transaction(data: CreateTransactionInput):
 
 
 # Create item: upload photo to item_photos bucket, save item in DB
-@app.post("/api/create-item")
+@api.post("/create-item")
 async def create_item(data: ItemInput):
     try:
         # Insert item data into the items table
@@ -133,7 +144,7 @@ async def create_item(data: ItemInput):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/api/bid-for-item/{item_id}")
+@api.post("/api/bid-for-item/{item_id}")
 async def bid_for_item(item_id: str, data: BidInput):
     try:
         assert data.item_id == item_id
@@ -202,7 +213,7 @@ async def get_accepted_bids_as_buyer(user_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.put("/api/edit-item/{item_id}")
+@api.put("/api/edit-item/{item_id}")
 async def edit_item(item_id: str, data: ItemInput):
     try:
         # Update item data in the items table
@@ -227,7 +238,7 @@ async def edit_item(item_id: str, data: ItemInput):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/api/get-user-karma/{user_id}")
+@api.post("/get-user-karma/{user_id}")
 async def get_user_karma(user_id: str):
     try:
         response = supabase.table("users").select(
@@ -237,7 +248,7 @@ async def get_user_karma(user_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/api/get-user/{user_id}")
+@api.get("/get-user/{user_id}")
 async def get_user(user_id: str, request: Request):
     """
     Retrieve user data by user ID.
@@ -265,7 +276,7 @@ async def get_user(user_id: str, request: Request):
 # Get all items ids
 
 
-@app.get("/api/get-all-items-ids")
+@api.get("/get-all-items-ids")
 async def get_all_items_ids():
     """
     Get all item IDs from the database.
@@ -282,7 +293,7 @@ async def get_all_items_ids():
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/api/get-all-items")
+@api.get("/get-all-items")
 async def get_all_items():
     """
     Get all items from the database.
@@ -301,7 +312,7 @@ async def get_all_items():
 # Get data given item id
 
 
-@app.get("/api/get-item/{item_id}")
+@api.get("/get-item/{item_id}")
 async def get_item(item_id: str):
     """
     Retrieve item data by item ID.
@@ -340,7 +351,7 @@ async def get_item(item_id: str):
 # Returns paginated items with a similar name
 
 
-@app.get("/api/search-items-by-name/")
+@api.get("/search-items-by-name/")
 async def search_items_by_name(name: str = "", page: int = 1, page_size: int = 10):
     """
     Search for items by name with pagination, sorted by recency.
@@ -375,7 +386,7 @@ async def search_items_by_name(name: str = "", page: int = 1, page_size: int = 1
 
 
 # Get number of pages for a given search query
-@app.get("/api/get-number-of-pages/")
+@api.get("/get-number-of-pages/")
 async def get_number_of_pages(name: str = "", page_size: int = 10):
     """
     Calculate the total number of pages required for a given search query, sorted by recency.
@@ -408,4 +419,4 @@ async def get_number_of_pages(name: str = "", page_size: int = 10):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(api, host="0.0.0.0", port=8000)
