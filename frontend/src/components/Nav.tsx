@@ -5,7 +5,7 @@ import { Dialog, DialogTrigger } from '@radix-ui/react-dialog';
 import LoginModal from './LoginModal';
 import { useNavigate } from 'react-router-dom';
 import ProfilePicture from './ProfilePicture';
-import { Button } from './ui/button';
+import { Button, buttonVariants } from './ui/button';
 import {
   Sheet,
   SheetContent,
@@ -13,6 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
 
 export default function Navbar() {
   const { user } = useAuthContext();
@@ -51,7 +52,10 @@ export default function Navbar() {
 
         <div className="w-full max-w-lg">
           <div className="flex h-full items-center gap-2 rounded-full bg-pine-50 p-2 text-pine-900">
-            <Search className="ml-1 stroke-pine-900 cursor-pointer" onClick={() => navigate('/?q=' + searchQuery)} />
+            <Search
+              className="ml-1 cursor-pointer stroke-pine-900"
+              onClick={() => navigate('/?q=' + searchQuery)}
+            />
             <input
               className={
                 'flex w-full rounded-md border border-transparent bg-transparent px-0 py-0 text-base ring-offset-transparent placeholder:text-pine-900 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-2'
@@ -69,13 +73,22 @@ export default function Navbar() {
         </div>
         <div className="flex items-center">
           {user ? (
-            <div className="cursor-pointer" onClick={() => navigate('/profile')}>
+            <div
+              className="cursor-pointer"
+              onClick={() => navigate('/profile')}
+            >
               <ProfilePicture user={user} />
             </div>
           ) : (
             <Dialog>
-              <DialogTrigger>
-                <CircleUser className="cursor-pointer stroke-pine-900" />
+              <DialogTrigger
+                className={cn(
+                  buttonVariants({ variant: 'filled' }),
+                  'rounded-full',
+                )}
+              >
+                {/* <CircleUser className="cursor-pointer stroke-pine-900" /> */}
+                sign in
               </DialogTrigger>
               <LoginModal />
             </Dialog>

@@ -174,10 +174,10 @@ export default function SingleItem() {
                 {bids.filter((b) => b.accepted).length} accepted)
               </span>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="w-11/12 rounded-lg">
               <DialogHeader>
-                <DialogTitle>Active Offers</DialogTitle>
-                <DialogDescription>All active offers</DialogDescription>
+                <DialogTitle>active offers</DialogTitle>
+                <DialogDescription>all active offers</DialogDescription>
               </DialogHeader>
               <div className="grid grid-cols-3">
                 {bids.map((bid, idx) => (
@@ -191,20 +191,21 @@ export default function SingleItem() {
                             <CircleUser className="h-10 w-10" />
                           )}
                           <div className="stroke-pine-900 text-pine-900">
-                            <div className="text-xl font-bold">
+                            <div className="text-base font-bold md:text-xl">
                               {bidUsers[idx]?.name}
                             </div>
                             <div className="flex items-center gap-1 text-base">
-                              <Star className="inline" />
+                              <Star className="inline" size={16} />
                               <span>
                                 {Math.round(bidUsers[idx]?.karma || 0)}
                                 &nbsp;karma
                               </span>
                             </div>
+
+                            <div className="flex flex-row items-center opacity-60">
+                              {new Date(bid.created_at).toLocaleDateString()}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex flex-row items-center">
-                          {new Date(bid.created_at).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
@@ -312,10 +313,12 @@ export default function SingleItem() {
               {seller.pfp_url ? (
                 <img src={seller.pfp_url} className="h-10 w-10 rounded-full" />
               ) : (
-                <CircleUser className="h-10 w-10" />
+                <CircleUser className="h-10 w-10 stroke-1" />
               )}
               <div className="stroke-pine-900 text-pine-900">
-                <div className="text-xl font-bold">{seller.name}</div>
+                <div className="text-base font-bold">
+                  {seller.name || seller.email}
+                </div>
                 <div className="flex items-center gap-1 text-base">
                   <Star className="inline" size={16} />
                   <span>{Math.round(seller.karma || 0)} karma</span>
