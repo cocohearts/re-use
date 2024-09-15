@@ -11,6 +11,7 @@ from datetime import timedelta, datetime
 from PIL import Image
 import io
 import tempfile
+from geolocation import *
 
 load_dotenv()
 
@@ -55,7 +56,9 @@ class Email:
             "can_self_pickup": self.can_self_pickup,
             "mailing_list": self.mailing_list,  # Include mailing list in JSON
             "photo_urls": self.mailman_links,
-            "other_urls": self.links
+            "other_urls": self.links,
+            "gmaps_location": self.gmaps_location,
+            "gis_location": self.gis_location
         }
 
 
@@ -478,6 +481,8 @@ def write_to_db(email: Email):
     email_location, can_self_pickup = get_location_and_can_self_pickup(
         email.subject + "\n" + email.body)
     email.location = email_location
+    email.gmaps_location = get_address_from_desc(email_location)
+    email.gis_location = get_gis_from_address(email.gmaps_location)
     email.can_self_pickup = can_self_pickup
     email_json = email.to_json()
     print(email_json)
