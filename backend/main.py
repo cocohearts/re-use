@@ -138,22 +138,6 @@ async def edit_item(item_id: str, data: ItemInput):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
-
-# Set user karma: given user id, set karma
-@app.post("/set-user-karma/{user_id}")
-async def set_user_karma(user_id: str, karma: float):
-    try:
-        response = (supabase.table("users").update(
-            {"karma": karma}).eq("id", user_id).execute())
-
-        if len(response.data) == 0:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        return {"message": "User karma updated successfully", "data": response}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
 @app.post("/get-user-karma/{user_id}")
 async def get_user_karma(user_id: str):
     try:
@@ -256,7 +240,7 @@ async def get_item(item_id: str):
 
 # Returns paginated items with a similar name
 @app.get("/search-items-by-name/{name}")
-async def search_items_by_name(name: str, page: int = 1, page_size: int = 5):
+async def search_items_by_name(name: str, page: int = 1, page_size: int = 10):
     """
     Search for items by name with pagination.
 
