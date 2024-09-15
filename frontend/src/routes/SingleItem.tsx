@@ -3,7 +3,7 @@ import { useLocation, useParams } from 'react-router-dom';
 import { Tables } from '../../database.types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CircleUser, MailOpen, MapPin, Star } from 'lucide-react';
-import { get } from '@/lib/utils';
+import { get, post } from '@/lib/utils';
 import { useAuthContext } from '@/components/AuthProvider';
 
 export default function SingleItem() {
@@ -14,6 +14,7 @@ export default function SingleItem() {
   const [error, setError] = useState<string | undefined>(undefined);
   const [notFound, setNotFound] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [bids, setBids] = useState<Tables<'bids'>[]>([]);
 
   const [photoIndex, setPhotoIndex] = useState<number>(0);
   const location = useLocation();
@@ -50,6 +51,33 @@ export default function SingleItem() {
       });
   }, [item]);
 
+  useEffect(() => {
+    if (!item || !item.seller_id) return;
+    setLoading(true);
+    get('/api/get-bids-for-item/' + item.id)
+      .then((data) => {
+        setBids(data.data);
+        setLoading(false);
+      })
+      .catch((e) => {
+        setLoading(false);
+        alert(e);
+      });
+  }, [item]);
+
+  const toggleBid = () => {
+    if (!user || !item) return;
+    if (bids.find(x => x.bidder_id === user.id) !== undefined) {
+      post('/api/cancel-bid/' + item.id, {}).then(resp => {
+        setBids(resp.data);
+      }).catch(alert);
+    } else {
+      post('/api/bid-for-item/' + item.id, {}).then(resp => {
+        setBids(resp.data);
+      }).catch(alert);
+    }
+  }
+
   return item ? (
     <>
       {item.photo_urls && (
@@ -81,7 +109,7 @@ export default function SingleItem() {
         <MapPin className="inline" /> {item.location}
       </div>
       <div className="flex flex-col items-center justify-center">
-        {user?.id && (seller?.id !== user?.id) &&
+        {user?.id && (seller?.id !== user?.id) && (
           <button
             className={
               'mt-[24px] w-[min(15rem,100%)] rounded-lg py-[13px] text-center text-lg text-white' +
@@ -89,12 +117,12 @@ export default function SingleItem() {
               (user ? 'bg-pine-900' : 'bg-gray-500')
             }
             onClick={() => {
-              // insert logic here that lets us create an offer.
+              toggleBid();
             }}
           >
             make an offer
           </button>
-        }
+        )}
         <div className="flex flex-row items-center gap-2 py-[13px] text-lg text-pine-900 text-opacity-50">
           <MailOpen className="inline" size={16} />
           <span>0 active offers</span>
