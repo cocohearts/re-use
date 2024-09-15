@@ -1,11 +1,19 @@
 import { useState } from 'react';
 import { useAuthContext } from './AuthProvider';
-import { CircleUser, Menu, Search } from 'lucide-react';
+import { CircleUser, Menu, Plus, Search, Store, User } from 'lucide-react';
 import { Dialog, DialogTrigger } from '@radix-ui/react-dialog';
 import LoginModal from './LoginModal';
 import { useNavigate } from 'react-router-dom';
 import ProfilePicture from './ProfilePicture';
-import { Button, buttonVariants } from './ui/button';
+import { Button } from './ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 
 export default function Navbar() {
   const { user } = useAuthContext();
@@ -15,9 +23,33 @@ export default function Navbar() {
   return (
     <div className="flex w-full justify-center py-4">
       <div className="flex w-full flex-row items-center justify-between gap-2">
-        <Button variant="ghost">
-          <Menu className="stroke-pine-900" />
-        </Button>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu className="stroke-pine-900" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left">
+            <SheetHeader className="mb-4">
+              <SheetTitle>
+                <a href="/">re-use</a>
+              </SheetTitle>
+            </SheetHeader>
+            <div className="flex flex-col">
+              <a className="flex items-center gap-4 px-2 py-3" href="/profile">
+                <Store className="h-6" /> browse items
+              </a>
+              <a className="flex items-center gap-4 px-2 py-3" href="/add-item">
+                <Plus className="h-6" /> add item
+              </a>
+              <hr className="my-3" />
+              <a className="flex items-center gap-4 px-2 py-3" href="/profile">
+                <User className="h-6" /> profile
+              </a>
+            </div>
+          </SheetContent>
+        </Sheet>
+
         <div className="w-full max-w-lg">
           <div className="flex h-full items-center gap-2 rounded-full bg-pine-50 p-2 text-pine-900">
             <Search className="ml-1 stroke-pine-900" />

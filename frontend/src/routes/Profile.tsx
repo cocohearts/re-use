@@ -49,7 +49,7 @@ export default function ProfilePage() {
   }, [user]);
 
   return (
-    <div className="px-4 text-pine-900">
+    <div className="text-pine-900">
       {/* Header */}
       <div className="mb-4 flex flex-col items-start gap-2">
         {/* Name */}
