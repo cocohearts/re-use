@@ -5,10 +5,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CircleUser, MailOpen, MapPin, Star } from 'lucide-react';
 import { get, post } from '@/lib/utils';
 import { useAuthContext } from '@/components/AuthProvider';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 export default function SingleItem() {
   const { uuid } = useParams();
-  const {user} = useAuthContext();
+  const { user } = useAuthContext();
   const [item, setItem] = useState<Tables<'items'> | undefined>(undefined);
   const [seller, setSeller] = useState<Tables<'users'> | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
@@ -67,16 +76,20 @@ export default function SingleItem() {
 
   const toggleBid = () => {
     if (!user || !item) return;
-    if (bids.find(x => x.bidder_id === user.id) !== undefined) {
-      post('/api/cancel-bid/' + item.id, {}).then(resp => {
-        setBids(resp.data);
-      }).catch(alert);
+    if (bids.find((x) => x.bidder_id === user.id) !== undefined) {
+      post('/api/cancel-bid/' + item.id, {})
+        .then((resp) => {
+          setBids(resp.data);
+        })
+        .catch(alert);
     } else {
-      post('/api/bid-for-item/' + item.id, {}).then(resp => {
-        setBids(resp.data);
-      }).catch(alert);
+      post('/api/bid-for-item/' + item.id, {})
+        .then((resp) => {
+          setBids(resp.data);
+        })
+        .catch(alert);
     }
-  }
+  };
 
   return item ? (
     <>
@@ -109,7 +122,7 @@ export default function SingleItem() {
         <MapPin className="inline" /> {item.location}
       </div>
       <div className="flex flex-col items-center justify-center">
-        {user?.id && (seller?.id !== user?.id) && (
+        {user?.id && seller?.id !== user?.id && (
           <button
             className={
               'mt-[24px] w-[min(15rem,100%)] rounded-lg py-[13px] text-center text-lg text-white' +
@@ -125,7 +138,44 @@ export default function SingleItem() {
         )}
         <div className="flex flex-row items-center gap-2 py-[13px] text-lg text-pine-900 text-opacity-50">
           <MailOpen className="inline" size={16} />
-          <span>0 active offers</span>
+          <Dialog>
+            <DialogTrigger asChild>
+              <span className="cursor-pointer">
+                {bids.length} active offers (
+                {bids.filter((b) => b.accepted).length} accepted)
+              </span>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Active Offers</DialogTitle>
+                <DialogDescription>
+                  All active offers
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid columns-3">
+                {bids.map(
+                  bid => (
+                    <>
+                      <div className="col-span-2">
+                        {bid.bidder_id}
+                      </div>
+                      <div className="col-span-1">
+                        {user && user.id === item.seller_id ? (
+                          <Button className={"bg-pine-900"}>
+                            {bid.accepted ? "Cancel" : "Accept Bid"}
+                          </Button>
+                        ) : bid.accepted ? (
+                          <div className="text-pine-900">
+                            Bid Accepted
+                          </div>
+                        ) : null}
+                      </div>
+                    </>
+                  )
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 

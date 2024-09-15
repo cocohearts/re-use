@@ -11,21 +11,24 @@ export type Database = {
     Tables: {
       bids: {
         Row: {
+          accepted: boolean | null
           bidder_id: string
           created_at: string
-          id: number
+          id: string
           item_id: string
         }
         Insert: {
+          accepted?: boolean | null
           bidder_id: string
           created_at?: string
-          id?: number
+          id?: string
           item_id: string
         }
         Update: {
+          accepted?: boolean | null
           bidder_id?: string
           created_at?: string
-          id?: number
+          id?: string
           item_id?: string
         }
         Relationships: [
@@ -51,10 +54,13 @@ export type Database = {
           created_at: string
           description: string
           email: string | null
+          gis_location: number[] | null
+          gmaps_location: string | null
           id: string
           location: string | null
           mailing_list: string | null
           name: string
+          other_urls: string[] | null
           photo_urls: string[] | null
           quality: string | null
           seller_id: string | null
@@ -65,10 +71,13 @@ export type Database = {
           created_at?: string
           description?: string
           email?: string | null
+          gis_location?: number[] | null
+          gmaps_location?: string | null
           id?: string
           location?: string | null
           mailing_list?: string | null
           name: string
+          other_urls?: string[] | null
           photo_urls?: string[] | null
           quality?: string | null
           seller_id?: string | null
@@ -79,10 +88,13 @@ export type Database = {
           created_at?: string
           description?: string
           email?: string | null
+          gis_location?: number[] | null
+          gmaps_location?: string | null
           id?: string
           location?: string | null
           mailing_list?: string | null
           name?: string
+          other_urls?: string[] | null
           photo_urls?: string[] | null
           quality?: string | null
           seller_id?: string | null
