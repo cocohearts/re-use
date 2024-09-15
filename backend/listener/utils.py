@@ -1,10 +1,12 @@
 import re
 from typing import List, Tuple
+import warnings
 import requests
 from supabase import create_client, Client
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
+from datetime import timedelta, datetime
 
 load_dotenv()
 
@@ -271,7 +273,11 @@ def parse_logs(log_text: str) -> List[Email]:
                     is_useless = True
                     break
                 if check_existence(email_date, email_subject):
-                    exists = False
+                    exists = True
+                if  check_existence(email_date, email_subject) is None:
+                    print("Couldn't parse date, moving on.")
+                    is_useless = True
+                    break
             elif line.startswith('Message-ID:'):
                 continue
             elif line.startswith('In-Reply-To:'):
@@ -327,18 +333,53 @@ def parse_logs(log_text: str) -> List[Email]:
     return emails
 
 
-def check_existence(date, subject):
-    # Check if a row with the same timestamp and same name already exists in the database
-    result = supabase.table("items").select(
-        "*").eq("created_at", date).eq("name", subject).execute()
+def parse_date(date_str, default=None):
+    # Define possible date formats
+    possible_formats = [
+        "%a, %d %b %Y %H:%M:%S %z",  # Format: 'Sun, 1 Sep 2024 08:22:39 -0400'
+        "%A, %B %d, %Y at %I:%M%p"   # Format: 'Thursday, September 12, 2024 at 3:52PM'
+    ]
+    
+    # Try each format until one works
+    for date_format in possible_formats:
+        try:
+            return datetime.strptime(date_str.replace('?', ''), date_format)  # Removing any '?' symbols
+        except ValueError:
+            continue  # Try the next format if this one fails
+    
+    # If no formats match, give a warning and return the default date
+    warnings.warn(f"Warning: Failed to parse date string '{date_str}'. Using default date.")
+    
+    # Return the provided default date or the current datetime if no default is given
+    return default
 
-    # If any rows are returned, the email already exists
-    if result.data:
-        print(
-            f"Email with subject '{subject}' from {date} already exists in the database.")
-        return True
+def check_existence(date_str, subject):
+    # Parse the date string into a datetime object with a fallback to the current date
+    date = parse_date(date_str)
+    if date is None:
+        return None
+    
+    # Calculate the start and end of the one-week window before and after the date
+    start_date = date - timedelta(weeks=1)
+    end_date = date + timedelta(weeks=1)
+    
+    # Convert the start and end dates back to strings for the database query (if needed)
+    start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
+    end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Check if there is an entry within the one-week window with the same name
+    result = supabase.table("items").select("*").gte("created_at", start_date_str).lte("created_at", end_date_str).execute()
 
+    # If any rows are returned, check if the name is the same
+    for row in result.data:
+        if row['name'] == subject:
+            print(f"Email with subject '{subject}' from {row['created_at']} already exists within one week.")
+            return True
+    
     return False
+
+
+
 
 
 def write_to_db(email: Email):
