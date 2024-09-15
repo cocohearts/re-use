@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from . import mailer
+from backend.mailer import utils as mailerutils
 
 from backend.auth_middleware import AuthMiddleware
 
@@ -201,7 +201,7 @@ async def get_bids_for_item(item_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@ app.post("/accept-bid/{bid_id}")
+@app.post("/accept-bid/{bid_id}")
 async def accept_bid(bid_id: str):
     try:
         # Check the current state of the bid before updating
@@ -226,7 +226,7 @@ async def accept_bid(bid_id: str):
         user_email = supabase.table("users").select("email").eq("id", bidder_id).execute().data[0]['email']
         subject = "Your Bid Has Been Accepted"
         body = f"Congratulations! Your bid for bid ID {bid_id} has been accepted."
-        mailer.send_email(user_email, subject, body)
+        mailerutils.send_email(user_email, subject, body)
 
         return {"message": "Bid updated successfully and email sent to the bidder", "data": response}
     except Exception as e:
