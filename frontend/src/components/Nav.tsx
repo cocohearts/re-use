@@ -5,6 +5,7 @@ import { Dialog, DialogTrigger } from '@radix-ui/react-dialog';
 import LoginModal from './LoginModal';
 import { useNavigate } from 'react-router-dom';
 import ProfilePicture from './ProfilePicture';
+import { Button, buttonVariants } from './ui/button';
 
 export default function Navbar() {
   const { user } = useAuthContext();
@@ -14,9 +15,9 @@ export default function Navbar() {
   return (
     <div className="flex w-full justify-center py-4">
       <div className="flex w-full flex-row items-center justify-between gap-2">
-        <div>
+        <Button variant="ghost">
           <Menu className="stroke-pine-900" />
-        </div>
+        </Button>
         <div className="w-full max-w-lg">
           <div className="flex h-full items-center gap-2 rounded-full bg-pine-50 p-2 text-pine-900">
             <Search className="ml-1 stroke-pine-900" />
