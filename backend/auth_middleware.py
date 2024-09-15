@@ -17,6 +17,8 @@ app = FastAPI()
 
 
 def get_current_user(request: Request) -> dict:
+    if not hasattr(request.state, "user"):
+        return None
     user = request.state.user
     return user
 
