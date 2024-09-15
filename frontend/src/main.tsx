@@ -8,10 +8,11 @@ import Navbar from './components/Nav';
 import SigninLink from './routes/Signin';
 import ProfilePage from './routes/Profile';
 import Browse from './routes/Browse';
+import SingleItem from './routes/SingleItem';
 
 const Wrapper = ({ children }: any) => {
   return (
-    <div className="mx-auto w-full max-w-4xl">
+    <div className="mx-auto w-[min(56rem,90%)] mb-10">
       <Navbar />
       {children}
     </div>
@@ -24,6 +25,14 @@ const router = createBrowserRouter([
     element: (
       <Wrapper>
         <Browse />
+      </Wrapper>
+    ),
+  },
+  {
+    path: '/item/:uuid',
+    element: (
+      <Wrapper>
+        <SingleItem />
       </Wrapper>
     ),
   },
