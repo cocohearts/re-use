@@ -15,8 +15,9 @@ urls = [
 
 def update_db():
     for url_pair in urls:
-        url, login_url = url_pair
-        emails = parse_logs(get_logs(url, login_url))
+        login_url, url = url_pair
+        log_text, mailing_list = get_logs(login_url, url)
+        emails = parse_logs(log_text, mailing_list)
 
         for email in emails:
             write_to_db(email)

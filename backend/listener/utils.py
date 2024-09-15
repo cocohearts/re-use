@@ -28,6 +28,7 @@ supabase: Client = create_client(supabase_url, supabase_key)
 reuse_login_url: str = 'https://mailman.mit.edu/mailman/private/reuse/'
 free_foods_login_url: str = 'https://mailman.mit.edu/mailman/private/free-foods/'
 
+
 class Email:
     def __init__(self, subject, from_, date, body, location, mailing_list, can_self_pickup, name=""):
         self.subject = subject
@@ -40,6 +41,7 @@ class Email:
         self.links = []
         self.mailman_links = []
         self.can_self_pickup = can_self_pickup
+
     def __str__(self):
         return f"Subject: {self.subject}\nFrom: {self.from_}\nMailing List: {self.mailing_list}\nName: {self.name}\nDate: {self.date}\nCan self-pickup: {self.can_self_pickup}\nBody: {self.body}\nLinks: {self.links}\nMailman Links: {self.mailman_links}"
 
@@ -57,7 +59,7 @@ class Email:
         }
 
 
-def get_logs(login_url, url) -> str:
+def get_logs(login_url, url) -> tuple[str, str]:
     # Initialize a session to maintain cookies and session state
     session = requests.Session()
 
@@ -71,6 +73,8 @@ def get_logs(login_url, url) -> str:
     # Perform the login
     response = session.post(login_url, data=login_data)
 
+    mailing_list = login_url[40:-1]
+
     # Retry mechanism
     max_retries = 3
     for attempt in range(max_retries):
@@ -78,7 +82,7 @@ def get_logs(login_url, url) -> str:
         if response.status_code == 200:
             print('Download successful.')
             s = response.content.decode('utf-8')
-            return s
+            return (s, mailing_list)
         else:
             print(f'Download failed. Attempt {attempt + 1} of {max_retries}.')
             if attempt < max_retries - 1:
@@ -89,6 +93,7 @@ def get_logs(login_url, url) -> str:
 
     # If all retries fail
     return None
+
 
 def get_image_from_mailman_link(login_url, url) -> str:
     # Initialize a session to maintain cookies and session state
@@ -114,7 +119,7 @@ def get_image_from_mailman_link(login_url, url) -> str:
             # Compress and resize the image
             with Image.open(io.BytesIO(image_bytes)) as img:
                 img.thumbnail((720, 720))  # Resize image to at most 720p
-                
+
                 # Generate a UUID for the image
                 image_uuid = uuid.uuid4()
                 file_path = f"{image_uuid}.jpg"  # Use UUID as the file name
@@ -131,8 +136,10 @@ def get_image_from_mailman_link(login_url, url) -> str:
                         file_options = {
                             "content-type": "image/jpeg"
                         }
-                        supabase.storage.from_(bucket_name).upload(file_path, f, file_options=file_options)
-                    print(f'Image uploaded to {bucket_name} with UUID {image_uuid}.')
+                        supabase.storage.from_(bucket_name).upload(
+                            file_path, f, file_options=file_options)
+                    print(
+                        f'Image uploaded to {bucket_name} with UUID {image_uuid}.')
                     return file_path
                 finally:
                     # Clean up the temporary file
@@ -147,6 +154,7 @@ def get_image_from_mailman_link(login_url, url) -> str:
 
     # If all retries fail
     return None
+
 
 def get_location_and_can_self_pickup(email_body: str) -> Tuple[str, bool]:
     try:
@@ -277,7 +285,7 @@ def is_opportunity(subject, body):
     return True
 
 
-def parse_logs(log_text: str) -> List[Email]:
+def parse_logs(log_text: str, mailing_list: str) -> List[Email]:
     # Split the log text into individual emails
     emails = []
     current_email = []
@@ -333,13 +341,14 @@ def parse_logs(log_text: str) -> List[Email]:
                 email_date = line[5:].strip()
 
             elif line.startswith('Subject:'):
-                email_subject, mailing_list = get_subj_and_mailing_list_from_line(line)
+                email_subject, _ = get_subj_and_mailing_list_from_line(
+                    line)
                 if email_subject.startswith(('Reuse Digest', 'Fwd:', 'Re:')):
                     is_useless = True
                     break
                 if check_existence(email_date, email_subject):
                     exists = True
-                if  check_existence(email_date, email_subject) is None:
+                if check_existence(email_date, email_subject) is None:
                     print("Couldn't parse date, moving on.")
                     is_useless = True
                     break
@@ -363,12 +372,13 @@ def parse_logs(log_text: str) -> List[Email]:
         # Post-processing
         if is_useless or exists:
             continue
-        
+
         email_body = '\n'.join(body_lines).strip()
         if not is_opportunity(email_subject, email_body):
             continue
 
-        email_location, can_self_pickup = get_location_and_can_self_pickup(email_body)
+        email_location, can_self_pickup = get_location_and_can_self_pickup(
+            email_body)
         email = Email(email_subject, email_from,
                       email_date, email_body, email_location, mailing_list, can_self_pickup, sender_name)
 
@@ -385,15 +395,13 @@ def parse_logs(log_text: str) -> List[Email]:
                 elif "/reuse/" in link:
                     login_url = reuse_login_url
                 try:
-                    public_url = supabase.storage.from_('item_photos').get_public_url(get_image_from_mailman_link(login_url, link))
+                    public_url = supabase.storage.from_('item_photos').get_public_url(
+                        get_image_from_mailman_link(login_url, link))
                     email.mailman_links.append(public_url)
                     email.links.pop(i)
                 except Exception as e:
-                    warnings.warn(f"Failed to upload image for link '{link}' to Supabase: {e}")
-
-                        
-                
-                
+                    warnings.warn(
+                        f"Failed to upload image for link '{link}' to Supabase: {e}")
 
         # # Remove text after and including the separator if present in the email body
         # separator = "________________________________"
@@ -421,51 +429,54 @@ def parse_date(date_str, default=None):
         "%a, %d %b %Y %H:%M:%S %z",  # Format: 'Sun, 1 Sep 2024 08:22:39 -0400'
         "%A, %B %d, %Y at %I:%M%p"   # Format: 'Thursday, September 12, 2024 at 3:52PM'
     ]
-    
+
     # Try each format until one works
     for date_format in possible_formats:
         try:
-            return datetime.strptime(date_str.replace('?', ''), date_format)  # Removing any '?' symbols
+            # Removing any '?' symbols
+            return datetime.strptime(date_str.replace('?', ''), date_format)
         except ValueError:
             continue  # Try the next format if this one fails
-    
+
     # If no formats match, give a warning and return the default date
-    warnings.warn(f"Warning: Failed to parse date string '{date_str}'. Using default date.")
-    
+    warnings.warn(
+        f"Warning: Failed to parse date string '{date_str}'. Using default date.")
+
     # Return the provided default date or the current datetime if no default is given
     return default
+
 
 def check_existence(date_str, subject):
     # Parse the date string into a datetime object with a fallback to the current date
     date = parse_date(date_str)
     if date is None:
         return None
-    
+
     # Calculate the start and end of the one-week window before and after the date
     start_date = date - timedelta(weeks=1)
     end_date = date + timedelta(weeks=1)
-    
+
     # Convert the start and end dates back to strings for the database query (if needed)
     start_date_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
     end_date_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
-    
+
     # Check if there is an entry within the one-week window with the same name
-    result = supabase.table("items").select("*").gte("created_at", start_date_str).lte("created_at", end_date_str).execute()
+    result = supabase.table("items").select(
+        "*").gte("created_at", start_date_str).lte("created_at", end_date_str).execute()
 
     # If any rows are returned, check if the name is the same
     for row in result.data:
         if row['name'] == subject:
-            print(f"Email with subject '{subject}' from {row['created_at']} already exists within one week.")
+            print(
+                f"Email with subject '{subject}' from {row['created_at']} already exists within one week.")
             return True
-    
+
     return False
 
 
-
-
-
 def write_to_db(email: Email):
-    email_location, can_self_pickup = get_location_and_can_self_pickup(email.subject + "\n" + email.body)
+    email_location, can_self_pickup = get_location_and_can_self_pickup(
+        email.subject + "\n" + email.body)
     email.location = email_location
     email.can_self_pickup = can_self_pickup
     email_json = email.to_json()
@@ -478,7 +489,8 @@ if __name__ == "__main__":
     login_url = 'https://mailman.mit.edu/mailman/private/reuse/'
     supabase.table("items").delete().neq(
         'id', '00000000-0000-0000-0000-000000000000').execute()
-    emails = parse_logs(get_logs(login_url, url))
+    log_text, mailing_list = get_logs(login_url, url)
+    emails = parse_logs(log_text, mailing_list)
     for email in emails[:1]:
         print(email)
         print("———————————————————————————————————————————————————————————")

@@ -63,6 +63,12 @@ class ItemInput(BaseModel):
 
 
 
+class BidInput(BaseModel):
+    bidder_id: str
+    created_at: str
+    item_id: str
+
+
 # Create user: given email, set karma to 0
 @app.post("/api/create-user")
 async def create_user(data: CreateUserInput):
@@ -123,6 +129,75 @@ async def create_item(data: ItemInput):
         )
 
         return {"message": "Item created successfully", "data": response}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/bid-for-item/{item_id}")
+async def bid_for_item(item_id: str, data: BidInput):
+    try:
+        assert data.item_id == item_id
+        # Insert bid data into the bids table
+        response = (
+            supabase.table("bids")
+            .insert({
+                "bidder_id": data.bidder_id,
+                "created_at": data.created_at,
+                "item_id": data.item_id,
+            })
+            .execute()
+        )
+
+        return {"message": "Bid created successfully", "data": response}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/get-bids-for-item/{item_id}")
+async def get_bids_for_item(item_id: str):
+    try:
+        response = supabase.table("bids").select(
+            "*").eq("item_id", item_id).execute()
+        return {"message": "Bids retrieved successfully", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/accept-bid/{bid_id}")
+async def accept_bid(bid_id: str):
+    try:
+        # Update bid data in the bids table
+        response = (
+            supabase.table("bids")
+            .update({
+                "accepted": True,
+            })
+            .eq("id", bid_id)  # Assuming bid_id is the identifier for the bid
+            .execute()
+        )
+
+        return {"message": "Bid updated successfully", "data": response}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/get-accepted-bids-as-seller/{user_id}")
+async def get_accepted_bids_as_seller(user_id: str):
+    try:
+        response = supabase.table("bids").select(
+            "*").eq("seller_id", user_id).eq("accepted", True).execute()
+        return {"message": "Accepted bids retrieved successfully", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/get-accepted-bids-as-buyer/{user_id}")
+async def get_accepted_bids_as_buyer(user_id: str):
+    try:
+        response = supabase.table("bids").select(
+            "*").eq("buyer_id", user_id).eq("accepted", True).execute()
+        return {"message": "Accepted bids retrieved successfully", "data": response.data}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
