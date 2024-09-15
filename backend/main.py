@@ -36,6 +36,8 @@ app.add_middleware(
 app.add_middleware(AuthMiddleware)
 
 # Schema for creating a user
+
+
 class CreateUserInput(BaseModel):
     email: str
     name: str
@@ -58,9 +60,8 @@ class ItemInput(BaseModel):
     photo_urls: List[str]
 
 
-
 # Create user: given email, set karma to 0
-@app.post("/create-user")
+@app.post("/api/create-user")
 async def create_user(data: CreateUserInput):
     try:
         response = (
@@ -75,7 +76,7 @@ async def create_user(data: CreateUserInput):
 
 
 # Create transaction: given buyer_id, seller_id, item_id
-@app.post("/create-new-transaction")
+@app.post("/api/create-new-transaction")
 async def create_new_transaction(data: CreateTransactionInput):
     try:
         response = (
@@ -98,7 +99,7 @@ async def create_new_transaction(data: CreateTransactionInput):
 
 
 # Create item: upload photo to item_photos bucket, save item in DB
-@app.post("/create-item")
+@app.post("/api/create-item")
 async def create_item(data: ItemInput):
     try:
         # Insert item data into the items table
@@ -121,7 +122,7 @@ async def create_item(data: ItemInput):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.put("/edit-item/{item_id}")
+@app.put("/api/edit-item/{item_id}")
 async def edit_item(item_id: str, data: ItemInput):
     try:
         # Update item data in the items table
@@ -143,13 +144,16 @@ async def edit_item(item_id: str, data: ItemInput):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/get-user-karma/{user_id}")
+
+@app.post("/api/get-user-karma/{user_id}")
 async def get_user_karma(user_id: str):
     try:
-        response = supabase.table("users").select("karma").eq("id", user_id).execute()
+        response = supabase.table("users").select(
+            "karma").eq("id", user_id).execute()
         return {"message": "User karma retrieved successfully", "data": response.data[0]}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @app.get("/api/get-user/{user_id}")
 async def get_user(user_id: str, request: Request):
@@ -161,12 +165,14 @@ async def get_user(user_id: str, request: Request):
         - data (dict): User information including id, username, email, karma, created_at, updated_at.
     """
     try:
-        response = supabase.table("users").select("*").eq("id", user_id).execute()
+        response = supabase.table("users").select(
+            "*").eq("id", user_id).execute()
 
         if len(response.data) == 0:
             raise HTTPException(status_code=404, detail="User not found")
 
-        user_data = response.data[0]  # Assuming the response contains a list of users
+        # Assuming the response contains a list of users
+        user_data = response.data[0]
         return {
             "message": "User retrieved successfully",
             "data": user_data  # Return the entire user_data dictionary
@@ -175,7 +181,9 @@ async def get_user(user_id: str, request: Request):
         raise HTTPException(status_code=400, detail=str(e))
 
 # Get all items ids
-@app.get("/get-all-items-ids")
+
+
+@app.get("/api/get-all-items-ids")
 async def get_all_items_ids():
     """
     Get all item IDs from the database.
@@ -191,7 +199,8 @@ async def get_all_items_ids():
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/get-all-items")
+
+@app.get("/api/get-all-items")
 async def get_all_items():
     """
     Get all items from the database.
@@ -208,7 +217,9 @@ async def get_all_items():
         raise HTTPException(status_code=400, detail=str(e))
 
 # Get data given item id
-@app.get("/get-item/{item_id}")
+
+
+@app.get("/api/get-item/{item_id}")
 async def get_item(item_id: str):
     """
     Retrieve item data by item ID.
@@ -218,7 +229,8 @@ async def get_item(item_id: str):
         - data (dict): Item information including id, seller_id, photo_urls, quality, name, description.
     """
     try:
-        response = supabase.table("items").select("*").eq("id", item_id).execute()
+        response = supabase.table("items").select(
+            "*").eq("id", item_id).execute()
         if len(response.data) == 0:
             raise HTTPException(status_code=404, detail="Item not found")
         return {"message": "Item retrieved successfully", "data": response.data[0]}
@@ -244,7 +256,9 @@ async def get_item(item_id: str):
 #         raise HTTPException(status_code=400, detail=str(e))
 
 # Returns paginated items with a similar name
-@app.get("/search-items-by-name/")
+
+
+@app.get("/api/search-items-by-name/")
 async def search_items_by_name(name: str = "", page: int = 1, page_size: int = 10):
     """
     Search for items by name with pagination, sorted by recency.
@@ -260,7 +274,7 @@ async def search_items_by_name(name: str = "", page: int = 1, page_size: int = 1
     try:
         # Validate page_size (max 10)
         page_size = min(page_size, 10)
-        
+
         # Calculate the offset for pagination
         offset = (page - 1) * page_size
 
@@ -268,18 +282,18 @@ async def search_items_by_name(name: str = "", page: int = 1, page_size: int = 1
         query = supabase.table("items").select("*")
         if name:
             query = query.ilike("name", f"%{name}%")
-        
+
         # Sort by recency using the `created_at` column
-        response = query.order("created_at", desc=True).range(offset, offset + page_size - 1).execute()
+        response = query.order("created_at", desc=True).range(
+            offset, offset + page_size - 1).execute()
 
         return {"message": "Items retrieved successfully", "data": response.data}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-
 # Get number of pages for a given search query
-@app.get("/get-number-of-pages/")
+@app.get("/api/get-number-of-pages/")
 async def get_number_of_pages(name: str = "", page_size: int = 10):
     """
     Calculate the total number of pages required for a given search query, sorted by recency.
@@ -303,7 +317,8 @@ async def get_number_of_pages(name: str = "", page_size: int = 10):
         response = query.execute()
 
         total_items = response.count  # Supabase includes the total count in the response
-        total_pages = (total_items + page_size - 1) // page_size  # Calculate total number of pages
+        # Calculate total number of pages
+        total_pages = (total_items + page_size - 1) // page_size
 
         return {"message": "Total number of pages calculated successfully", "data": {"total_pages": total_pages}}
     except Exception as e:

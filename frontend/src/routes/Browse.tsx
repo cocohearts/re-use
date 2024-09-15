@@ -31,10 +31,10 @@ export default function Browse() {
     // implement logic to fetch the API for relevant queries and return the answer.
     setLoading(true);
     Promise.all([
-      get('https://re-use.onrender.com/get-number-of-pages', {
+      get('/api/get-number-of-pages', {
         name: searchQuery,
       }),
-      get('https://re-use.onrender.com/search-items-by-name', {
+      get('/api/search-items-by-name', {
         name: searchQuery,
         page: page,
       }),
@@ -55,7 +55,7 @@ export default function Browse() {
       items.map((item) =>
         item.seller_id
           ? get(
-              'https://re-use.onrender.com/get-user/' + (item.seller_id || ''),
+              '/api/get-user/' + (item.seller_id || ''),
             )
           : new Promise((resolve, _) => resolve(undefined)),
       ),
@@ -82,7 +82,7 @@ export default function Browse() {
             {items.map((item, idx) => (
               <div className="my-2 max-w-[250px] hover:scale-105 overflow-clip duration-200 cursor-pointer" onClick={() => navigate("/item/" + item.id)}>
                 <div className="flex justify-start">
-                  <img src={item.photo_urls ? item.photo_urls[0] : "https://localhost:5173/vite.svg"} className="h-[200px] w-[200px] rounded-lg" />
+                  <img src={item.photo_urls ? item.photo_urls[0] : "/vite.svg"} className="h-[200px] w-[200px] rounded-lg" />
                 </div>
                 <h2 className="text-base">{item.name}</h2>
                 <p className="text-sm">{item.quality}</p>
